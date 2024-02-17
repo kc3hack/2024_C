@@ -1,0 +1,29 @@
+<html>
+    <body>
+
+    <p>ボタンをクリック！</p>
+
+    <div id="edit_area1"></div>
+    <input type="button" value="Check(textContent)" onclick="myfunc1()">
+    <script>
+        var myfunc1 = function () {
+            // ここの中身を書き換えていきます 
+            var str = ".innerHTML<br>で<br>変数渡し！";;
+            document.getElementById('edit_area1').textContent = str ;
+        }
+    </script>
+
+    <p>ボタンをクリック！</p>
+
+    <div id="edit_area2"></div>
+    <input type="button" value="Check(innerHTML)" onclick="myfunc2()">
+    <script>
+        var myfunc2 = function () {
+            // ここの中身を書き換えていきます 
+            var str = ".innerHTML<br>で<br>変数渡し！";
+            document.getElementById('edit_area2').innerHTML = str ;
+        }
+    </script>
+
+  </body>
+</html>

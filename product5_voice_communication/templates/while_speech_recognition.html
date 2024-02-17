@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ja">
+    <head>
+        <meta charset="UTF-8">
+        <title>音声認識サンプル</title>
+    </head>
+
+    <body>
+        <h2>音声認識サンプル</h2>
+        <p>認識結果</p>
+
+        <button id="btn">start</button>
+        <div id="content"></div>
+
+        <div id="edit_area"></div>
+        <script>
+            //音楽を再生する
+            const music = new Audio('static/music/Vocals_monaural1_6.wav');
+            music.play();
+    
+
+            //音声認識ボタンで動く
+            SpeechRecognition = webkitSpeechRecognition || SpeechRecognition;
+            const recognition = new SpeechRecognition();
+
+            
+            recognition.onresult = (event) => {
+                alert(event.results[0][0].transcript);
+                document.getElementById('edit_area').textContent = event.results[0][0].transcript;
+            }
+
+            btn.addEventListener('click' , function() {
+                // 音声認識をスタート
+                recognition.start();
+            })
+            
+            
+            
+
+        </script>
+
+        <h2>ボリューム検知</h2> 
+        <script type="text/javascript" src="./static/js/detect_volume _and_speech_recognition.js"></script> 
+        <button onclick="beginDetect()">ボリューム検出の開始</button>
+        <p id="output"></p>
+        <p>認識結果</p>
+        <p id="output2"></p>
+    <body>
+<html>

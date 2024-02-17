@@ -1,0 +1,25 @@
+<!doctype html>
+<html>
+	<head>
+		<title>todo.html</title>
+	</head>
+	<body>
+		<h1>Todo Application</h1>
+		<!--追加1 (DBへの追加)-->
+		<form action="/add" method="POST">
+			<input type="text" name="todo" placeholder="input todo!!"/>
+			<input type="submit" value="Add"/>
+		</form>
+		<!------->
+
+        <!--追加2 (DBの表示)-->
+		<br>
+		{% for d in data %}
+			<p>{{d.id}} : {{d.todo}}</p>
+            
+            <!--各データの下に削除ボタンを表示-->
+            <a href="/del_todo/{{ d.id }}">[ delete ]</a>
+		{% endfor %}
+		<!---------->
+	</body>
+</html>

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ja">
+    <head>
+        <meta charset="UTF-8">
+        <title>音声再生サンプル</title>
+    </head>
+
+    <body>
+        <h2>音声再生サンプル</h2>
+        <p>再生結果</p>
+
+        <!--フリーランスエンジニアの技術ブログ, audioを自動再生しようとすると発生するエラー
+        https://tool-engineer.work/article72/-->
+    
+        <!--html-->
+        <div id="button-wrap" class="start">
+            <button id="can-play-button">再生可能にする</button>
+        </div>
+        
+        <!--audio id="audio" src="music/Vocals_monaural1_6.wav"></audio-->
+        <audio id="audio" src="https://tool-engineer.work/wp-content/uploads/2022/10/demo.mp3"></audio>
+        <bgsound src="https://tool-engineer.work/wp-content/uploads/2022/10/demo.mp3" loop="3" balance="0" volume="0"></bgsound>
+
+        <!--js-->
+        <script>
+            const audio = $("#audio")[0]
+
+            $(document).on('click', '#can-play-button', function (e) {
+                $("#button-wrap").hide();
+                //audioを読み込み
+                audio.load()
+                //３秒後audioを再生
+                setTimeout(function()
+                    {play(audio)}, 2000
+                );
+            });
+
+            function play(audio){
+                audio.play();
+            }
+        </script>
+    <body>
+<html>

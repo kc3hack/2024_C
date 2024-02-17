@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>Download audio</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+    </head>
+    <body>
+        <!--WebFrondEnd Engneer, JavaScript】Safari だけじゃないオーディオ再生の制約と再生開始遅延の解決方法
+        https://webfrontend.ninja/js-audio-autoplay-policy-and-delay/-->
+        <audio src="./music/Vocals_monaural1_6.wav" controls>
+        あなたのブラウザーは <code>audio</code>要素をサポートしていません。
+        </audio> <!--手動再生-->
+
+        <audio controls autoplay src="./music/Vocals_monaural1_6.wav" controls>
+        あなたのブラウザーは <code>audio</code>要素をサポートしていません。
+        </audio> <!--自動再生-->
+
+        <script>
+            let audio = null;
+            document.body.addEventListener('click', () => {
+            audio = new Audio("./music/Vocals_monaural1_6.wav");
+            });
+            
+            setInterval(() => {
+            if(audio) {
+                audio.play();
+            }
+            }, 5000);
+        </script>
+    </body>
+</html>
