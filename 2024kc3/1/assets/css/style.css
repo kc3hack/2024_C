@@ -1,0 +1,138 @@
+@charset "utf-8";
+
+/* <uniquifier>: Use a uniquifier for the class name
+// <weight>: Use a value from 100 to 900
+*/
+body{
+    font-family:'Noto Sans JP',"Arial",sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    color: #333;
+    
+}
+
+.h1{
+    font-size: 100px;
+    margin: 10px auto;
+}
+
+
+.section{
+padding: 30px 15px;
+font-size: 50px;
+}
+
+.section2{
+    background-color: #efefef;
+}
+.section-headline{
+    text-align: center;
+    font-size: 50px;
+    font-weight: bold;
+    margin: 0 0 40px;
+}
+
+.section-button{
+    padding-top: 100px;
+    text-align: center;
+    margin:10px auto;
+}
+
+
+.about{
+    margin: 0;
+    display: flex;
+}
+/*.about-image{}*/
+.about-caption{
+    padding-left: 20px;
+}
+.about-headline{
+    text-align: center;
+    margin: 0 0 20px;
+}
+/*.about-discription{}*/
+           
+.grid{
+    margin: 0;
+    padding: 0;
+    display: flex;
+    align-items: center;
+}
+.grid-item{
+    list-style: none;
+}
+.grid-col-2 > .grid-item{
+    width: 50%;
+}
+.grid-col-3 > .grid-item{
+    width: 33.33%;
+}
+.grid-col-4 > .grid-item{
+    width: 25%;
+}
+
+
+
+
+
+.button{
+    display:block;
+    color: #fff;
+    background-color: #333;
+    font-weight: bold;
+    
+    padding: 50px 200px;
+    text-decoration: none;
+    border-radius: 30%;
+    overflow: hidden;
+    box-shadow: 5px 5px 3px #bbb;
+    transition:box-shadow .2s;
+    font-size: 50px;
+    
+    text-align: center;
+
+    margin: 50px auto;
+}
+
+.button:hover{
+    box-shadow:0 0 0 #bbb;
+}
+
+
+
+.form th{
+    font-size: 50px ;
+}
+
+.select{
+    padding: 10px;
+    min-width: 300px;
+    border-radius: 5px;
+    font-size: 50px;
+}
+
+.input{
+    padding: 10px;
+    min-width: 500px;
+    border-radius: 5px;
+    font-size: 50px;
+}
+
+.radio{
+    margin: 50px;
+    font-size: 50px;
+}
+
+.textarea{
+    padding: 10px;
+    min-width: 500px;
+    border-radius: 5px;
+    font-size: 20px;
+}
+
+.form{}
+
+.form-table{
+    margin: 0 auto;
+}
