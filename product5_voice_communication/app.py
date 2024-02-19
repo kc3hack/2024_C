@@ -145,6 +145,7 @@ def loop_speech_recognition():
 		session['reconized_text'] = ""
 		session['selected_spot'] = 1
 		session['isAudioUpdated'] = "再生済" #音声ファイルが更新されたかどうか 0変わらない, 1更新された
+		session['speech_text'] = ""
 		initialized = True	
 
 		"""
@@ -154,8 +155,8 @@ def loop_speech_recognition():
 			os.remove(file_path)
 			print("古いファイルを削除しました")
 
-		speech_text = "1から10までの好きなスポットを選んでくれへん?"
-		TTS_zundamon_class.TTS_main(speech_text, path=file_path) #音声合成をする
+		session['speech_text'] = "1から10までの好きなスポットを選んでくれへん?"
+		TTS_zundamon_class.TTS_main(session['speech_text'], path=file_path) #音声合成をする
 		session['isAudioUpdated'] = "未再生"
 
 	
@@ -211,12 +212,12 @@ def loop_speech_recognition():
 
 				try:	
 					session['selected_spot'] = detect_selected_num(session['reconized_text'], spot_num)
-					time.sleep(2)
+					
 					print("selected_num=" + str(session['selected_spot']))
 					
-					speech_text = str(session['selected_spot']) + "番目について解説するわ"
-					TTS_zundamon_class.TTS_main(speech_text, path=file_path) #音声合成をする
-					time.sleep(1)
+					session['speech_text'] = str(session['selected_spot']) + "番目について解説するわ"
+					TTS_zundamon_class.TTS_main(session['speech_text'], path=file_path) #音声合成をする
+					
 					session['isAudioUpdated'] = "未再生"
 					time.sleep(5)
 					session['state'] = STATE_LIST['overview']
@@ -234,9 +235,9 @@ def loop_speech_recognition():
 
 				try:	
 					print("selected_num=" + str(session['selected_spot']))
-					speech_text = str(session['selected_spot']) + "番目のスポットおもろいスポットがあるねん"
-					TTS_zundamon_class.TTS_main(speech_text, path=file_path) #音声合成をする
-					time.sleep(1)
+					session['speech_text'] = str(session['selected_spot']) + "番目のスポットおもろいスポットがあるねん"
+					TTS_zundamon_class.TTS_main(session['speech_text'], path=file_path) #音声合成をする
+					
 					session['isAudioUpdated'] = "未再生"
 					time.sleep(5)
 
@@ -263,8 +264,14 @@ def loop_speech_recognition():
 
 	#return redirect(url_for('loop_speech_recognition', state="selection", audio_chaged=audio_changed))	
 	#return render_template('loop_speech_recognition.html', audio_chaged=audio_changed, state="selection") #html側でこの変数todoを扱えるようにする
-	return render_template('loop_speech_recognition.html', audio_chaged=session['isAudioUpdated']) #html側でこの変数todoを扱えるようにする
+	return render_template('loop_speech_recognition.html', audio_chaged=session['isAudioUpdated'], speech_text=session['speech_text']) #html側でこの変数todoを扱えるようにする
 
+
+#ボタンで挙動が変わるもの
+@app.route('/map_spot')
+def map_spot_show():
+	
+    return render_template('map_spot.html') #html側でこの変数todoを扱えるようにする
 
 
 #ボタンで挙動が変わるもの

@@ -21,5 +21,10 @@
             <a href="/del_todo/{{ d.id }}">[ delete ]</a>
 		{% endfor %}
 		<!---------->
+
+		<!--指定したURLに行けるボタン-->
+		<form action="/loop_speech_recognition" method="get">
+			<input type="submit" value='音声ページへ行く!'>
+		</form>
 	</body>
 </html>

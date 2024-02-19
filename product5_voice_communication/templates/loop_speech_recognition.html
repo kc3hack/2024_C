@@ -14,7 +14,7 @@
 
         <button id="playButton">音を鳴らす</button>
         <!--p id="audio_result_show">結果は{{audio_chaged}}です</p-->
-        <p>音声ファイル更新の結果は</p>
+        <p>Agant:{{speech_text}}</p>
 
         <!--音声合成確認用の入力form-->
         <form autocomplete="off" name="result_form" id="result_form_id" action="{{ url_for('loop_speech_recognition') }}" method="POST">
@@ -292,5 +292,9 @@
             }
         </script>
          
+        <!--指定したURLに行けるボタン-->
+		<form action="/map_spot" method="get">
+			<input type="submit" value='地図ページへ行く!'>
+		</form>
     </body>
 <html>
