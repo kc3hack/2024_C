@@ -12,31 +12,35 @@
 
     <link rel="stylesheet" href="./assets/css/sanitize.css">
     <link rel="stylesheet" href="./assets/css/style.css">
+
 </head>
 <body>
-    <h1>関西のいいとこえぇgent</h1>
+    <h1 class="h1">関西のいいとこえぇgent</h1>
     <section class="section">
-        <h1 class="section-headline">スポット登録<h1>
+        <h1 class="section-headline">スポット登録</h1>
         <form class="form" action="">
             <table class="form-table">
 
                 <tr>
-                <th>スポット名</th>
-                <td>
-                    <input class="input" type="text" name="spot-name">
-                </td>
+                    <th>スポット名</th>
+                    <td>
+                        <input class="input" type="text" name="spot-name">
+                    </td>
                 </tr>
-                <th>緯度</th>
-                <td>
-                    <input class="input" type="text" value="">
-                </td>
+                
+                <tr>
+                    <th>緯度</th>
+                    <td>
+                        <input class="input" type="text" name="latitude" value="">
+                    </td>
                 </tr>
-                <th>経度</th>
-                <td>
-                    <input class="input" type="text" value="">
-                </td>
+                <tr>
+                    <th>経度</th>
+                    <td>
+                        <input class="input" type="text" name="longitude" value="">
+                    </td>
                 </tr>
-
+                
 
                 <tr>
                     <th>地域</th>
@@ -68,14 +72,14 @@
                 <tr>
                     <th>概要</th>
                     <td>
-                        <input class="input" type="text" value="">
+                        <input class="input" type="text" cols="100" value="">
                     </td>
                 </tr>
 
                 <tr>
                     <th>詳細</th>
                     <td>
-                        <textarea class="textarea" name="" id="" cols="40" rows="30"></textarea>
+                        <textarea class="textarea" name="" id="" cols="100" rows="10"></textarea>
                     </td>
                 </tr>
                 
@@ -83,8 +87,6 @@
     
             <button class="button" type="submit" onclick="location.href='./index1.html'">次へ</button>
         </form>    
-    
-    
-
+    </section>
 </body>
 </html>
