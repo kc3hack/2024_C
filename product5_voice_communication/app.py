@@ -6,11 +6,13 @@ https://note.com/junyaaa/n/n9eab953c73c9, 2024年2月14日.
 app.pyがあるdir内で「flask run」をして実行
 """
 
-from sre_parse import State
 from flask import Flask, render_template, request, redirect, url_for, send_from_directory, send_file, session
 from flask_sqlalchemy import SQLAlchemy
+from flask_socketio import SocketIO
 import os 
 import time
+import random
+from threading import Thread
 
 from TTS_voicevox_local_api_file_write import TTC_voicevox_local_api_chara
 from Sentenc_Sim import detect_selected_num, detect_yes_or_no
@@ -29,6 +31,9 @@ app.config['TEMPLATES_AUTO_RELOAD'] = True
 
 #シークレットキー
 app.secret_key = 'your_secret_key'
+
+socketio = SocketIO(app)
+
 # 初回のアクセス時に初期化を行うフラグをセットするキー
 INITIALIZED_KEY = 'initialized'
 
@@ -48,9 +53,20 @@ class ToDo(db.Model): #dbのModelを継承したテーブルのクラスを定�
 
 @app.route('/')
 def index():
-    data = ToDo.query.all() #データベースのToDoモデルのデータを全て検索して取得 dataへ格納
-	
-    return render_template('todo.html',data=data) #html側でこの変数todoを扱えるようにする
+	session.clear()  # 一時的にセッションをクリア
+	#print("Session after clear:", session)
+	data = ToDo.query.all() #データベースのToDoモデルのデータを全て検索して取得 dataへ格納
+	return render_template('todo.html',data=data) #html側でこの変数todoを扱えるようにする
+
+
+#隠れスポット入力画面
+@app.route('/input_spot')
+def input_spot():
+
+	session.clear()  # 一時的にセッションをクリア
+	#print("Session after clear:", session)
+
+	return render_template('input_spot.html')
 
 
 #以下追加↓	
@@ -114,11 +130,14 @@ def while_speech_recognition():
 #状態リスト
 STATE_LIST = {"selection":1, "confirmation":2, "overview":3, "communication":4}
 
+SESSION_INIT = True
 
 #/<string:state>
 #音声認識の連続的な繰り返し methodを明示しないとmethod not allowed errorになる
 @app.route('/loop_speech_recognition',  methods=['POST', 'GET'])
 def loop_speech_recognition():
+
+	global SESSION_INIT
 
 	spot_num = 10
 
@@ -131,8 +150,8 @@ def loop_speech_recognition():
 
 	file_path = "./music/output.wav"
 
-	session.clear()  # 一時的にセッションをクリア
-	print("Session after clear:", session)
+	#session.clear()  # 一時的にセッションをクリア
+	#print("Session after clear:", session)
 
 	# セッションから初期化フラグを取得
 	initialized = session.get(INITIALIZED_KEY, False)
@@ -140,13 +159,18 @@ def loop_speech_recognition():
 
     # 初回アクセス時に初期化
 	if not initialized:
+
+		print("initializedされました")
 		session[INITIALIZED_KEY] = True
 		session['state'] = STATE_LIST['selection']
 		session['reconized_text'] = ""
 		session['selected_spot'] = 1
 		session['isAudioUpdated'] = "再生済" #音声ファイルが更新されたかどうか 0変わらない, 1更新された
 		session['speech_text'] = ""
+		session['my_latitude'] = 34
+		session['my_longitude'] = 135
 		initialized = True	
+
 
 		"""
 		POSTを投げなくても発話できるようにする
@@ -169,11 +193,10 @@ def loop_speech_recognition():
 	if request.method == 'POST':
 		#reconized_text = request.form["endMsg"] 
 		session['reconized_text'] = request.form.get("reconized_text")
-		audio_changed = request.form.get("result_text")
-		print("audio_changed=" + str(audio_changed))
+		#audio_changed = request.form.get("result_text")
 		#print("reconized_text=" + str(reconized_text))
 		#print("audio_changed=" + str(audio_changed))
-		print("audio_chaged=" + str(audio_changed))
+		#print("audio_chaged=" + str(audio_changed))
 		print("session['isAudioUpdated']=" + str(session['isAudioUpdated']))
 		print("session['reconized_text']=" + str(session['reconized_text']))
 		print("session['state']=" + str(session['state']))
@@ -181,97 +204,122 @@ def loop_speech_recognition():
 
 
 		
-		try:	
-			#time.sleep(5)
-			#print("音楽ファイルを生成する")
+			
+		#time.sleep(5)
+		#print("音楽ファイルを生成する")
 
-			#以前のファイルがあれば削除する
+		#以前のファイルがあれば削除する
 
-			#ユーザーに選択させる段階である場合
-			if session['state'] == STATE_LIST['selection']:
+		#ユーザーに選択させる段階である場合
+		if session['state'] == STATE_LIST['selection']:
 
-				try:	
-					#成功した上で, 何か話していたら
-					if session['reconized_text'] != "":
-						#time.sleep(3)
-						session['state'] = STATE_LIST['confirmation']
+			time.sleep(2)
 
-						#return redirect('get_audio')
+			try:	
+				#成功した上で, 何か話していたら
+				if session['reconized_text'] != "":
+					#time.sleep(3)
+					session['state'] = STATE_LIST['confirmation']
 
-				except Exception:
-					pass
+					#return redirect('get_audio')
 
+			except Exception:
+				pass
 
+			print("session['state']=" + str(session['state']))
 
-			#ユーザーに確認させる段階である場合
-			if session['state'] == STATE_LIST['confirmation']:
-
-				if os.path.exists(file_path):
-					os.remove(file_path)
-					print("古いファイルを削除しました")
-
-				try:	
-					session['selected_spot'] = detect_selected_num(session['reconized_text'], spot_num)
-					
-					print("selected_num=" + str(session['selected_spot']))
-					
-					session['speech_text'] = str(session['selected_spot']) + "番目について解説するわ"
-					TTS_zundamon_class.TTS_main(session['speech_text'], path=file_path) #音声合成をする
-					
-					session['isAudioUpdated'] = "未再生"
-					time.sleep(5)
-					session['state'] = STATE_LIST['overview']
-
-				except Exception:
-					pass
+			return render_template('loop_speech_recognition.html', audio_chaged=session['isAudioUpdated'], speech_text=session['speech_text']) #html側でこの変数todoを扱えるようにする
 
 
-			#概要解説
-			if session['state'] == STATE_LIST['overview']:
 
-				if os.path.exists(file_path):
-					os.remove(file_path)
-					print("古いファイルを削除しました")
+		#ユーザーに確認させる段階である場合
+		if session['state'] == STATE_LIST['confirmation']:
 
-				try:	
-					print("selected_num=" + str(session['selected_spot']))
-					session['speech_text'] = str(session['selected_spot']) + "番目のスポットおもろいスポットがあるねん"
-					TTS_zundamon_class.TTS_main(session['speech_text'], path=file_path) #音声合成をする
-					
-					session['isAudioUpdated'] = "未再生"
-					time.sleep(5)
+			if os.path.exists(file_path):
+				os.remove(file_path)
+				print("古いファイルを削除しました")
 
-				except Exception:
-					pass
+			try:	
+				session['selected_spot'] = detect_selected_num(session['reconized_text'], spot_num)
+				
+				print("selected_num=" + str(session['selected_spot']))
+				
+				session['speech_text'] = str(session['selected_spot']) + "番目について解説するわ"
+				TTS_zundamon_class.TTS_main(session['speech_text'], path=file_path) #音声合成をする
+				
+				session['isAudioUpdated'] = "未再生"
+				time.sleep(5)
+				session['state'] = STATE_LIST['overview']
+
+			except Exception:
+				pass
+			
+			return render_template('loop_speech_recognition.html', audio_chaged=session['isAudioUpdated'], speech_text=session['speech_text']) #html側でこの変数todoを扱えるようにする
 
 
-			#ファイルが新しく生成されるまで待つ
-			#while not os.path.isfile(file_path):
-			#	print("生成まち")
-			#pass
 
-		except Exception:
-			print(Exception)
 
-		audio_changed = 1
+		#概要解説
+		if session['state'] == STATE_LIST['overview']:
+
+			if os.path.exists(file_path):
+				os.remove(file_path)
+				print("古いファイルを削除しました")
+
+			try:	
+				print("selected_num=" + str(session['selected_spot']))
+				session['speech_text'] = str(session['selected_spot']) + "番目のスポットおもろいスポットがあるねん"
+				TTS_zundamon_class.TTS_main(session['speech_text'], path=file_path) #音声合成をする
+				
+				session['isAudioUpdated'] = "未再生"
+				time.sleep(2)
+
+			except Exception:
+				pass
+			
+			return render_template('loop_speech_recognition.html', audio_chaged=session['isAudioUpdated'], speech_text=session['speech_text']) #html側でこの変数todoを扱えるようにする
+
+
+	else:
+		return render_template('loop_speech_recognition.html', audio_chaged=session['isAudioUpdated'], speech_text=session['speech_text']) #html側でこの変数todoを扱えるようにする
+
+
+		#ファイルが新しく生成されるまで待つ
+		#while not os.path.isfile(file_path):
+		#	print("生成まち")
+		#pass
+
+	
+
+		#audio_changed = 1
 		
 
 		#print("音楽ファイルを再生する")
 
-	else:
-		audio_changed = 0
+	#else:
+		#audio_changed = 0
+	#	pass
 
 
 	#return redirect(url_for('loop_speech_recognition', state="selection", audio_chaged=audio_changed))	
 	#return render_template('loop_speech_recognition.html', audio_chaged=audio_changed, state="selection") #html側でこの変数todoを扱えるようにする
-	return render_template('loop_speech_recognition.html', audio_chaged=session['isAudioUpdated'], speech_text=session['speech_text']) #html側でこの変数todoを扱えるようにする
+	#return render_template('loop_speech_recognition.html', audio_chaged=session['isAudioUpdated'], speech_text=session['speech_text']) #html側でこの変数todoを扱えるようにする
 
 
 #ボタンで挙動が変わるもの
-@app.route('/map_spot')
+@app.route('/map_spot', methods=['POST', 'GET'])
 def map_spot_show():
-	
-    return render_template('map_spot.html') #html側でこの変数todoを扱えるようにする
+	#session.clear()  # 一時的にセッションをクリア
+	#print("Session after clear:", session)
+
+	if request.method == "POST":
+		session['my_latitude'] = request.form.get('my_latitude')
+		session['my_longitude'] = request.form.get('my_longitude')
+
+		print("自分は今, ")
+		print("緯度=" + str(session['my_latitude']) + ", 経度=" + str(session['my_longitude']) + "にいます!")
+
+	return render_template('map_spot.html') #html側でこの変数todoを扱えるようにする
 
 
 #ボタンで挙動が変わるもの
@@ -323,9 +371,57 @@ def get_audio():
 	return send_file('./music/output.wav', mimetype='audio/wav')
 
 
+@app.route('/realtime_ajax_map')
+def realtime_map_show():
+    return render_template('realtime_ajax_map.html')
 
 
+"""
+地図の位置を更新する
+"""
+@socketio.on('update_location')
+def handle_update_location(data):
+	latitude = data.get('latitude', '')
+	longitude = data.get('longitude', '')
+	
+	print("latitude=" + str(latitude))
+	print("longitude=" + str(longitude))
 
+    # クライアントに処理結果をブロードキャスト
+	socketio.emit('location_processed', {'result': 'Success'})
+
+
+#Socket入出力
+@socketio.on('connect')
+def handle_connect():
+	print('Client connected')
+	send_random_coordinates()
+	#start_coordinate_generation()
+
+
+"""
+ランダムに生成した座標を送る
+"""
+def send_random_coordinates():
+	print("ランダムな緯度経度を作れり")
+	for _ in range(10):
+		latitude = random.uniform(-90, 90)
+		longitude = random.uniform(-180, 180)
+		socketio.emit('coordinates', {'latitude': latitude, 'longitude': longitude})
+
+
+"""
+def start_coordinate_generation():
+    def generate_coordinates():
+        while True:
+            latitude = random.uniform(-90, 90)
+            longitude = random.uniform(-180, 180)
+            socketio.emit('coordinates', {'latitude': latitude, 'longitude': longitude})
+            time.sleep(1)
+
+    thread = Thread(target=generate_coordinates)
+    thread.start()
+"""
 
 #アプリとDBの初期化
 """
@@ -346,4 +442,5 @@ def clear_session():
 
 if __name__ == '__main__':
 	app_db_init(app, db) #データベースを作成する 初回に1回のみ実行
-	app.run(debug=True)  #アプリケーションを毎回実行する
+	#app.run(debug=True)  #アプリケーションを毎回実行する
+	socketio.run(app, debug=True)

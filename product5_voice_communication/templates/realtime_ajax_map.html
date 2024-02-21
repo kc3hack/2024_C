@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
+    />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.2/socket.io.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <title>Real-time Map</title>
+    <style>
+      #map {
+        height: 400px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map" style="width:600px;height:600px"></div>
+
+    <form id="my_position_form"  method="POST">
+			緯度<input name="my_latitude" id="my_latitude" value=0></input>
+			経度<input name="my_longitude" id="my_longitude" value=0></input>
+		</form>
+
+    <ul id="coordinatesList"></ul>
+
+    <script>
+      const map = L.map('map').setView([35.6895, 139.6917], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+      
+      const socket = io.connect('http://' + document.domain + ':' + location.port);
+
+      socket.on('connect', () => {
+        console.log('Connected to server');
+      });
+
+      socket.on('disconnect', () => {
+        console.log('Disconnected from server');
+      });
+      
+
+      
+      socket.on('location_processed', (data) => {
+        console.log('Server processed location:', data);
+        
+        // 位置情報を Leaflet マップ上に表示
+        const { latitude, longitude } = data;
+        const marker = L.marker([latitude, longitude]).addTo(map);
+        map.panTo([latitude, longitude]);
+      });
+
+
+      //10個の座標を表示する
+      socket.on('coordinates', (data) => {
+        console.log('Received coordinates:', data);
+        //alert("座標がとどいた")
+
+        const coordinatesList = document.getElementById('coordinatesList');
+        const listItem = document.createElement('li');
+        listItem.textContent = `Latitude: ${data.latitude}, Longitude: ${data.longitude}`;
+        coordinatesList.appendChild(listItem);
+      });
+      
+
+      function updateMapView(latitude, longitude) {
+        map.setView([latitude, longitude], map.getZoom());
+        //map.setView([latitude, longitude], 13);
+      }
+
+      function updateLocation() {
+        if ('geolocation' in navigator) {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              const { latitude, longitude } = position.coords;
+              updateMapView(latitude, longitude);
+
+              document.getElementById('my_latitude').value = latitude;
+				      document.getElementById('my_longitude').value = longitude;
+            },
+            (error) => {
+              console.error('Error getting location:', error);
+            }
+          );
+        } else {
+          console.error('Geolocation is not supported by your browser');
+        }
+      }
+
+      // 現在地情報をサーバーに送信
+      function sendLocationToServer() {
+        if ('geolocation' in navigator) {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              const { latitude, longitude } = position.coords;
+
+              // 現在地情報をサーバーに送信
+              socket.emit('update_location', { latitude, longitude });
+            },
+            (error) => {
+              console.error('Error getting location:', error);
+            }
+          );
+        } else {
+          console.error('Geolocation is not supported by your browser');
+        }
+      }
+
+
+      // 初回の位置情報更新
+      sendLocationToServer();
+      updateLocation();
+
+      // 定期的に位置情報を更新（適宜調整）
+      setInterval(() => {
+        sendLocationToServer();
+        updateLocation();
+      }, 1000); // 5秒ごとに更新
+    </script>
+
+    <form action="/loop_speech_recognition" method="get">
+      <input type="submit" value='音声ページへ行く!'>
+    </form>
+  </body>
+</html>

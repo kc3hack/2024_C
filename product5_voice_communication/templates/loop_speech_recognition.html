@@ -3,6 +3,7 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.2/socket.io.js"></script>
         <title>えぇgentとおしゃべりしよう!</title>
     </head>
     <body>
@@ -12,15 +13,41 @@
         -->
         <h1>音声認識による対話</h1>
 
+
+        <p>10個のスポット</p>
+        <ul id="coordinatesList"></ul>
+
+        <script>
+            const socket = io.connect('http://' + document.domain + ':' + location.port);
+
+            socket.on('connect', () => {
+                console.log('Connected to server');
+                //alert("繋ぎました")
+            });
+
+            //10個の座標を表示する
+            socket.on('coordinates', (data) => {
+                console.log('Received coordinates:', data);
+                //alert("座標がとどいた")
+
+                const coordinatesList = document.getElementById('coordinatesList');
+                const listItem = document.createElement('li');
+                listItem.textContent = `Latitude: ${data.latitude}, Longitude: ${data.longitude}`;
+                coordinatesList.appendChild(listItem);
+            });
+
+        </script>
+
+
         <button id="playButton">音を鳴らす</button>
         <!--p id="audio_result_show">結果は{{audio_chaged}}です</p-->
         <p>Agant:{{speech_text}}</p>
 
         <!--音声合成確認用の入力form-->
         <form autocomplete="off" name="result_form" id="result_form_id" action="{{ url_for('loop_speech_recognition') }}" method="POST">
-            <label for="result_text">音声を再生したかどうか</label><input type="text" id="audio_result_show" name="audio_result_value" value={{audio_chaged}}>
+            <label for="result_text">音声を再生したかどうか</label><input type="text" id="audio_result_show" name="audio_result_value" value={{audio_chaged}} readonly>
             <!--input type="text" id="myobj" value=""-->
-            <input type="submit" value="送信">
+            <!--input type="submit" value="送信"-->
         </form>
 
         
@@ -293,7 +320,7 @@
         </script>
          
         <!--指定したURLに行けるボタン-->
-		<form action="/map_spot" method="get">
+		<form action="/realtime_ajax_map" method="get">
 			<input type="submit" value='地図ページへ行く!'>
 		</form>
     </body>
