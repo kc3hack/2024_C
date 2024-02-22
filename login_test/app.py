@@ -4,7 +4,7 @@ from config import Config
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 import flask_login
-from forms import LoginForm, SignUpForm
+from forms import LoginForm, SignUpForm, AddSpotForm
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
 
@@ -16,7 +16,11 @@ migrate = Migrate(mainapp, db)
 login_manager = flask_login.LoginManager()
 login_manager.init_app(mainapp)
 
-class User(UserMixin, db.Model):
+#近くのスポットを抽出(まだ未実装)
+def getNearbySpots(longnitude, latitude):
+    pass
+
+class User(UserMixin, db.Model):#ユーザーモデル
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(16), index=True, unique=True)
     email = db.Column(db.String(120), index=True, unique=True)
@@ -31,17 +35,16 @@ class User(UserMixin, db.Model):
     def check_password(self, password):
         return check_password_hash(self.password, password)
 
-
 @login_manager.user_loader
 def load_user(id):
     return User.query.get(int(id))
 
-#隠れスポット
+#隠れスポットのデータベースモデル
 class Spot(db.Model):
     id = db.Column(db.Integer, primary_key=True) #固有ID
     name = db.Column(db.String(128), index=True) #隠れスポットの名前(なるべく正式名称で入れてもらう)
     type= db.Column(db.Integer)#隠れスポットの種類
-    pref = db.Column(db.Integer)#隠れスポットが所在する県　#0 : 京都 1 : 神戸 2 : 大阪 3 : 奈良  4 : 和歌山
+    pref = db.Column(db.Integer)#隠れスポットが所在する県　#0 : 京都 1 : 神戸 2 : 大阪 3 : その他
     overview = db.Column(db.String(128), index=True)
     detail = db.Column(db.Text) #隠れスポットの概要
     longitude = db.Column(db.Float, index=True)#緯度
@@ -50,7 +53,7 @@ class Spot(db.Model):
     def __repr__(self):
         return f'Spot {self.spotname}'
 
-#有名スポット(隠れスポットから除外されたスポット)
+#有名スポット(隠れスポットから除外されたスポット)のデータベースモデル
 class RejectedSpot(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), index=True)
@@ -92,7 +95,7 @@ def signup():#サインアップ実装
         User.query.session.add(newUser)
         User.query.session.commit()
         login_user(newUser)
-        return redirect(url_for('index'))
+        return redirect(url_for('add_spot'))
     return render_template('signup.html', title = 'Sign Up', form=form)
 
 @mainapp.route('/logut')
@@ -115,10 +118,20 @@ def communication():
 def map():
     return 'map'
 
-@mainapp.route('/addspot')
+#隠れスポット追加の実装
+@mainapp.route('/addspot', methods = ['GET', 'POST'])
 @login_required
 def add_spot():
-    return 'KakureSpot'
+    form = AddSpotForm()
+    if form.validate_on_submit():
+        newSpot = Spot(name = form.spot_name.data, longitude = form.longnitude.data, 
+                       latitude = form.latitude.data, overview = form.spot_overview.data,
+                       detail = form.spot_detail.data, type = int(form.spot_type.data),
+                       pref = int(form.spot_place.data))
+        Spot.query.session.add(newSpot)
+        Spot.query.session.commit()
+        return redirect(url_for("index"))
+    return render_template('addSpot.html', form = form)
 
 if __name__ == "__main__":
     mainapp.run(debug=True, port=8000)
