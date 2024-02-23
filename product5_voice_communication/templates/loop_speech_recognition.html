@@ -32,9 +32,37 @@
 
                 const coordinatesList = document.getElementById('coordinatesList');
                 const listItem = document.createElement('li');
-                listItem.textContent = `Latitude: ${data.latitude}, Longitude: ${data.longitude}`;
+                //listItem.textContent = `[${data.num}] Name: ${data.name}, Latitude: ${data.latitude}, Longitude: ${data.longitude}`;
+                listItem.innerHTML = `[${data.num}] スポット名:${data.name} 住所:${data.address}<br />`;
                 coordinatesList.appendChild(listItem);
             });
+
+
+            // 現在地情報をサーバーに送信
+            function sendLocationToServer() {
+                if ('geolocation' in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                    const { latitude, longitude } = position.coords;
+
+                    // 現在地情報をサーバーに送信
+                    socket.emit('update_location', { latitude, longitude });
+                    },
+                    (error) => {
+                    console.error('Error getting location:', error);
+                    }
+                );
+                } else {
+                console.error('Geolocation is not supported by your browser');
+                }
+            }
+
+            sendLocationToServer();
+
+            // 定期的に位置情報を更新（適宜調整）
+            setInterval(() => {
+                sendLocationToServer();
+            }, 5000); // 5秒ごとに更新
 
         </script>
 

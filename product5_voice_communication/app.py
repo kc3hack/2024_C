@@ -14,10 +14,10 @@ import time
 import random
 from threading import Thread
 
-from TTS_voicevox_local_api_file_write import TTC_voicevox_local_api_chara
-from Sentenc_Sim import detect_selected_num, detect_yes_or_no
-
-
+from TTS_voicevox_local_api_file_write import TTC_voicevox_local_api_chara #TTS
+from Sentenc_Sim import detect_selected_num, detect_yes_or_no #NLP
+from GPS_address_distance import GPS_Address_Distance #GPS
+from GPT35_turbo_RAG import llm_preparation, llm_communication #LLM
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.todo' #データベース作成のための種類とファイル名
@@ -44,11 +44,25 @@ db = SQLAlchemy(app) #SQLAlchemyのインスタンスを作成する
 #音声合成キャラクタの初期化
 TTS_zundamon_class = TTC_voicevox_local_api_chara(speaker=2)
 
+#CSV GPS知識データ読込みの初期化
+GPS_add_dis = GPS_Address_Distance()
 
+"""
+データベース
+"""
 class ToDo(db.Model): #dbのModelを継承したテーブルのクラスを定義する
 
 	id = db.Column(db.Integer, primary_key=True) #primary_key=True ここを主キーとする
 	todo = db.Column(db.String(128), nullable=False)
+
+
+"""
+セッションでリスト型を扱う
+"""
+class SessionList(list):
+    def __setitem__(self, i, item):
+        super(SessionList, self).__setitem__(i, item)
+        session.modified = True
 
 
 @app.route('/')
@@ -132,12 +146,21 @@ STATE_LIST = {"selection":1, "confirmation":2, "overview":3, "communication":4}
 
 SESSION_INIT = True
 
+"""
+LLM初期化したときのものを保存する変数 golbal変数とする
+"""
+list_index = ""
+hogen_llm = ""
+hogen_tag = ""
+
 #/<string:state>
 #音声認識の連続的な繰り返し methodを明示しないとmethod not allowed errorになる
 @app.route('/loop_speech_recognition',  methods=['POST', 'GET'])
 def loop_speech_recognition():
 
 	global SESSION_INIT
+	global list_index, hogen_llm, hogen_tag 
+
 
 	spot_num = 10
 
@@ -148,10 +171,9 @@ def loop_speech_recognition():
 	audio_changed = 0 # 0:音声ファイルが同じ(同じ内容を話している)
 	                  # 1:音声ファイルが異なる(違う内容を話している)
 
+	# 音声ファイルのパス
 	file_path = "./music/output.wav"
 
-	#session.clear()  # 一時的にセッションをクリア
-	#print("Session after clear:", session)
 
 	# セッションから初期化フラグを取得
 	initialized = session.get(INITIALIZED_KEY, False)
@@ -167,14 +189,12 @@ def loop_speech_recognition():
 		session['selected_spot'] = 1
 		session['isAudioUpdated'] = "再生済" #音声ファイルが更新されたかどうか 0変わらない, 1更新された
 		session['speech_text'] = ""
-		session['my_latitude'] = 34
-		session['my_longitude'] = 135
-		initialized = True	
 
+		session['my_latitude'] = 0
+		session['my_longitude'] = 0
 
-		"""
-		POSTを投げなくても発話できるようにする
-		"""
+		session['communication_count'] = 0 #対話回数を保持する
+
 		if os.path.exists(file_path):
 			os.remove(file_path)
 			print("古いファイルを削除しました")
@@ -183,8 +203,49 @@ def loop_speech_recognition():
 		TTS_zundamon_class.TTS_main(session['speech_text'], path=file_path) #音声合成をする
 		session['isAudioUpdated'] = "未再生"
 
-	
+		#付近の近い10スポット
 
+		"""
+		0     1     2    3        4    5     6    7     8     9
+		種類, 名前, 地域, 口コミ数, URL, 住所, 概要, 説明, 経度, 緯度
+		"""
+		"""
+		session['near_spots_kind'] = SessionList([""]*10)          #種類
+		session['near_spots_name'] = SessionList([""]*10)          #名前
+		session['near_spots_prefecture'] = SessionList([""]*10)    #地域
+		session['near_spots_kuchikomi_num'] = SessionList([0]*10)  #口コミ数
+		session['near_spots_URL'] = SessionList([""]*10)           #URL
+		session['near_spots_address'] = SessionList([""]*10)       #住所
+		session['near_spots_abstract'] = SessionList([""]*10)      #概要
+		session['near_spots_explanation'] = SessionList([""]*10)   #説明
+		session['near_spots_latitude'] = SessionList([0]*10)       #緯度(順序 逆)
+		session['near_spots_longitude'] = SessionList([0]*10)      #経度(順序 逆)
+		session.modified = True
+		"""
+
+		for i in range(10):
+			session['near_spots' + str(i)] = {
+				"kind":"", #種類
+				"name":"", #名前
+				"prefecture":"", #地域
+				"kuchikomi_num":0, #口コミ数
+				"URL":"", #URL
+				"address":"", #住所
+				"abstract":"", #概要
+				"explanation":"", #説明
+				"latitude":"", #緯度
+				"longitude":"" #経度
+			}
+
+
+		
+
+		initialized = True	
+
+
+
+	
+	#print("session['near_spots']=" + str(session['near_spots']))
 
 	#reconized_text = ""
 
@@ -192,7 +253,14 @@ def loop_speech_recognition():
 	#POSTのとき音声認識の結果を取得する
 	if request.method == 'POST':
 		#reconized_text = request.form["endMsg"] 
-		session['reconized_text'] = request.form.get("reconized_text")
+
+		if request.form.get("reconized_text") != "":
+			session['reconized_text'] = request.form.get("reconized_text")
+
+		"""
+		POSTを投げなくても発話できるようにする
+		"""
+
 		#audio_changed = request.form.get("result_text")
 		#print("reconized_text=" + str(reconized_text))
 		#print("audio_changed=" + str(audio_changed))
@@ -212,8 +280,12 @@ def loop_speech_recognition():
 
 		#ユーザーに選択させる段階である場合
 		if session['state'] == STATE_LIST['selection']:
+	
 
-			time.sleep(2)
+			time.sleep(3)
+
+			if request.form.get("reconized_text") != "":
+				session['reconized_text'] = request.form.get("reconized_text")
 
 			try:	
 				#成功した上で, 何か話していたら
@@ -244,11 +316,25 @@ def loop_speech_recognition():
 				
 				print("selected_num=" + str(session['selected_spot']))
 				
-				session['speech_text'] = str(session['selected_spot']) + "番目について解説するわ"
+				Top_10_nearest_spots = GPS_add_dis.get_nearest_spots_by_distance(session['my_latitude'], session['my_longitude'])
+				
+				#京都府の場合は京都弁になる
+				if Top_10_nearest_spots[int(session['selected_spot'])-1][2] == "京都府":
+					session['speech_text'] = str(session['selected_spot']) + "番目のスポットにおいでやす"
+
+				#兵庫県の場合は神戸弁になる
+				elif Top_10_nearest_spots[int(session['selected_spot'])-1][2] == "兵庫県":
+					session['speech_text'] = str(session['selected_spot']) + "番目のスポットにしとう"
+
+				#それ以外の場合は大阪弁になる
+				else:
+					session['speech_text'] = str(session['selected_spot']) + "番目のスポットにするんか"
+				
+				
 				TTS_zundamon_class.TTS_main(session['speech_text'], path=file_path) #音声合成をする
 				
 				session['isAudioUpdated'] = "未再生"
-				time.sleep(5)
+				#time.sleep(4)
 				session['state'] = STATE_LIST['overview']
 
 			except Exception:
@@ -268,11 +354,29 @@ def loop_speech_recognition():
 
 			try:	
 				print("selected_num=" + str(session['selected_spot']))
-				session['speech_text'] = str(session['selected_spot']) + "番目のスポットおもろいスポットがあるねん"
+				#print("session['near_spots_abstract']=" + str(session['near_spots_abstract']))
+				#time.sleep(2)
+				#session['speech_text'] = str(session['selected_spot']) + "番目のスポットは" + session['near_spots' + str(['selected_spot'] + 1)]["abstract"] + "感じのスポットやねん"
+				Top_10_nearest_spots = GPS_add_dis.get_nearest_spots_by_distance(session['my_latitude'], session['my_longitude'])
+				
+				#京都府の場合は京都弁になる
+				if Top_10_nearest_spots[int(session['selected_spot'])-1][2] == "京都府":
+					session['speech_text'] = str(session['selected_spot']) + "番目は" + Top_10_nearest_spots[session['selected_spot']-1][1] + "って名前やし" + Top_10_nearest_spots[int(session['selected_spot'])-1][6] + "感じのスポットにならはるわ"
+
+				#兵庫県の場合は神戸弁になる
+				elif Top_10_nearest_spots[int(session['selected_spot'])-1][2] == "兵庫県":
+					session['speech_text'] = str(session['selected_spot']) + "番目は" + Top_10_nearest_spots[session['selected_spot']-1][1] + "ちゅうところで" + Top_10_nearest_spots[int(session['selected_spot'])-1][6] + "感じのスポットみたいやな"
+
+				#それ以外の場合は大阪弁になる
+				else:
+					session['speech_text'] = str(session['selected_spot']) + "番目は" + Top_10_nearest_spots[session['selected_spot']-1][1] + "ちゅうところで" + Top_10_nearest_spots[int(session['selected_spot'])-1][6] + "感じのスポットになっとってん"
+				
 				TTS_zundamon_class.TTS_main(session['speech_text'], path=file_path) #音声合成をする
 				
+				#time.sleep(4)
+				
 				session['isAudioUpdated'] = "未再生"
-				time.sleep(2)
+				session['state'] = STATE_LIST['communication']
 
 			except Exception:
 				pass
@@ -280,30 +384,55 @@ def loop_speech_recognition():
 			return render_template('loop_speech_recognition.html', audio_chaged=session['isAudioUpdated'], speech_text=session['speech_text']) #html側でこの変数todoを扱えるようにする
 
 
+		#対話(具体的な説明)
+		if session['state'] == STATE_LIST['communication']:
+			
+
+			if os.path.exists(file_path):
+				os.remove(file_path)
+				print("古いファイルを削除しました")
+
+			try:
+				#音声を取得する
+				#session['reconized_text'] = request.form.get("reconized_text")
+					
+				#GPS情報を取得する
+				Top_10_nearest_spots = GPS_add_dis.get_nearest_spots_by_distance(session['my_latitude'], session['my_longitude'])
+				
+
+				if session['communication_count'] == 0:
+					#LLMを初期化する
+					list_index, hogen_llm, hogen_tag = llm_preparation(Top_10_nearest_spots[int(session['selected_spot'])-1])
+					session['communication_count'] = 1
+					
+
+				#質問に対する返答を作成する
+
+				if session['reconized_text'] != "":
+					session['speech_text'] = llm_communication(list_index, hogen_llm, hogen_tag, reconized_text=session['reconized_text'])
+
+				else:
+					session['speech_text'] = "なんか質問はあるん?"
+
+
+				TTS_zundamon_class.TTS_main(session['speech_text'], path=file_path) #音声合成をする
+
+
+				session['isAudioUpdated'] = "未再生"
+			
+
+			except Exception:
+				pass
+
+			return render_template('loop_speech_recognition.html', audio_chaged=session['isAudioUpdated'], speech_text=session['speech_text']) #html側でこの変数todoを扱えるようにする
+
+
+
+
 	else:
 		return render_template('loop_speech_recognition.html', audio_chaged=session['isAudioUpdated'], speech_text=session['speech_text']) #html側でこの変数todoを扱えるようにする
 
 
-		#ファイルが新しく生成されるまで待つ
-		#while not os.path.isfile(file_path):
-		#	print("生成まち")
-		#pass
-
-	
-
-		#audio_changed = 1
-		
-
-		#print("音楽ファイルを再生する")
-
-	#else:
-		#audio_changed = 0
-	#	pass
-
-
-	#return redirect(url_for('loop_speech_recognition', state="selection", audio_chaged=audio_changed))	
-	#return render_template('loop_speech_recognition.html', audio_chaged=audio_changed, state="selection") #html側でこの変数todoを扱えるようにする
-	#return render_template('loop_speech_recognition.html', audio_chaged=session['isAudioUpdated'], speech_text=session['speech_text']) #html側でこの変数todoを扱えるようにする
 
 
 #ボタンで挙動が変わるもの
@@ -381,11 +510,19 @@ def realtime_map_show():
 """
 @socketio.on('update_location')
 def handle_update_location(data):
-	latitude = data.get('latitude', '')
-	longitude = data.get('longitude', '')
+	session['my_latitude'] = data.get('latitude', '')
+	session['my_longitude'] = data.get('longitude', '')
 	
-	print("latitude=" + str(latitude))
-	print("longitude=" + str(longitude))
+	print("latitude=" + str(session['my_latitude']))
+	print("longitude=" + str(session['my_longitude']))
+
+	"""
+	0     1     2    3        4    5     6    7     8     9
+	種類, 名前, 地域, 口コミ数, URL, 住所, 概要, 説明, 経度, 緯度
+	"""
+
+	#print("session['near_spots_latitude']")
+
 
     # クライアントに処理結果をブロードキャスト
 	socketio.emit('location_processed', {'result': 'Success'})
@@ -403,11 +540,63 @@ def handle_connect():
 ランダムに生成した座標を送る
 """
 def send_random_coordinates():
-	print("ランダムな緯度経度を作れり")
-	for _ in range(10):
-		latitude = random.uniform(-90, 90)
-		longitude = random.uniform(-180, 180)
-		socketio.emit('coordinates', {'latitude': latitude, 'longitude': longitude})
+	#print("ランダムな緯度経度を作れり")
+	for i in range(10):
+		Top_10_nearest_spots = GPS_add_dis.get_nearest_spots_by_distance(session['my_latitude'], session['my_longitude'])
+	
+		"""
+		session['near_spots_kind'][i] = Top_10_nearest_spots[i][0] #種類
+		session['near_spots_name'][i] = Top_10_nearest_spots[i][1] #名前
+		session['near_spots_prefecture'][i] = Top_10_nearest_spots[i][2]   #地域
+		
+		session['near_spots_kuchikomi_num'][i] = int(Top_10_nearest_spots[i][3]) #口コミ数
+		session['near_spots_URL'][i] = Top_10_nearest_spots[i][4]         #URL
+		
+		session['near_spots_address'][i] = Top_10_nearest_spots[i][5]     #住所
+		session['near_spots_abstract'][i] = Top_10_nearest_spots[i][6]    #概要
+		session['near_spots_explanation'][i] = Top_10_nearest_spots[i][7]   #説明
+
+		session['near_spots_latitude'][i] = float(Top_10_nearest_spots[i][9])
+		session['near_spots_longitude'][i] = float(Top_10_nearest_spots[i][8])
+		"""
+
+		
+		session['near_spots' + str(i)] = {
+			"kind":          Top_10_nearest_spots[i][0], #種類
+			"name":          Top_10_nearest_spots[i][1], #名前
+			"prefecture":    Top_10_nearest_spots[i][2], #地域
+			"kuchikomi_num": Top_10_nearest_spots[i][3], #口コミ数
+			"URL":           Top_10_nearest_spots[i][4], #URL
+			"address":       Top_10_nearest_spots[i][5], #住所
+			"abstract":      Top_10_nearest_spots[i][6], #概要
+			"explanation":   Top_10_nearest_spots[i][7], #説明
+			"latitude":      Top_10_nearest_spots[i][9], #緯度
+			"longitude":     Top_10_nearest_spots[i][8] #経度
+		}
+
+	
+		"""
+		socketio.emit('coordinates', {'num': i+1, 
+									'name': session['near_spots_name'][i], 
+									'address': session['near_spots_address'][i], 
+									'abstract': session['near_spots_abstract'][i], 
+									'latitude': session['near_spots_latitude'][i], 
+									'longitude': session['near_spots_longitude'][i]})
+		"""
+		socketio.emit('coordinates', {'num': i+1, 
+									'name': session['near_spots' + str(i)]["name"], 
+									'address': session['near_spots' + str(i)]["address"], 
+									'abstract': session['near_spots' + str(i)]["abstract"], 
+									'latitude': session['near_spots' + str(i)]["latitude"], 
+									'longitude': session['near_spots' + str(i)]["longitude"]})
+						
+
+		#print("session_in_socket=")
+		#print(session)
+
+	session.modified = True
+
+	
 
 
 """
@@ -443,4 +632,9 @@ def clear_session():
 if __name__ == '__main__':
 	app_db_init(app, db) #データベースを作成する 初回に1回のみ実行
 	#app.run(debug=True)  #アプリケーションを毎回実行する
-	socketio.run(app, debug=True)
+	#socketio.run(app, debug=True)
+	socketio.run(app, host='0.0.0.0', port=7000)
+	#http://192.168.1.151:5000
+	"""
+	flask run --host=0.0.0.0 --port=5000
+	"""

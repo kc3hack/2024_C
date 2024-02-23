@@ -9,6 +9,8 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.2/socket.io.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href=".static/css/ajax_map_sanitize.css">
+    <link rel="stylesheet" href=".static/css/ajax_map_style.css">
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <title>Real-time Map</title>
     <style>
@@ -53,30 +55,69 @@
         map.panTo([latitude, longitude]);
       });
 
+      var spot_latitudes = [];
+      var spot_longitudes = []
 
       //10個の座標を表示する
       socket.on('coordinates', (data) => {
-        console.log('Received coordinates:', data);
-        //alert("座標がとどいた")
+          console.log('Received coordinates:', data);
+          //alert("座標がとどいた")
 
-        const coordinatesList = document.getElementById('coordinatesList');
-        const listItem = document.createElement('li');
-        listItem.textContent = `Latitude: ${data.latitude}, Longitude: ${data.longitude}`;
-        coordinatesList.appendChild(listItem);
+          const coordinatesList = document.getElementById('coordinatesList');
+          const listItem = document.createElement('li');
+          //listItem.textContent = `[${data.num}] Name: ${data.name}, Latitude: ${data.latitude}, Longitude: ${data.longitude}`;
+          listItem.innerHTML = `[${data.num}] スポット名:${data.name} 住所:${data.address}<br />`;
+          //alert(data.latitude)
+          spot_latitudes.push(data.latitude)
+          spot_longitudes.push(data.longitude)
+
+          //alert(spot_latitudes)
+
+          coordinatesList.appendChild(listItem);
       });
+      
+      
       
 
       function updateMapView(latitude, longitude) {
-        map.setView([latitude, longitude], map.getZoom());
+        map.setView([map.latitude, map.longitude], map.getZoom());
         //map.setView([latitude, longitude], 13);
       }
+
+
+      var radius = 2000
+
+      /* 位置情報取得成功処理*/
+      function onLocationFound(e) {
+        //var radius = e.accuracy / 3;
+
+        /* マーカーを表示*/
+        L.marker(e.latlng).addTo(map).bindPopup("現在地").openPopup();
+        
+        for (let i = 0; i < 10; i++){
+          L.marker([spot_latitudes[i], spot_longitudes[i]]).addTo(map) //.bindPopup("てすと").openPopup();
+        }
+        
+        //L.marker([35.7, 139.8]).addTo(map) //.bindPopup("てすと").openPopup();
+
+
+        /* サークルを表示*/
+        L.circle(e.latlng, radius).addTo(map);
+        //alert(e.latlng)
+      }
+
+      function onLocationError(e) {
+        alert("現在地を取得できませんでした。" + e.message);
+      }
+
+
 
       function updateLocation() {
         if ('geolocation' in navigator) {
           navigator.geolocation.getCurrentPosition(
             (position) => {
               const { latitude, longitude } = position.coords;
-              updateMapView(latitude, longitude);
+              //updateMapView(latitude, longitude);
 
               document.getElementById('my_latitude').value = latitude;
 				      document.getElementById('my_longitude').value = longitude;
@@ -113,12 +154,31 @@
       // 初回の位置情報更新
       sendLocationToServer();
       updateLocation();
+      map.on('locationfound', onLocationFound);
+      map.on('locationerror', onLocationError);
+
+      map.locate({
+        setView: true,
+        //maxZoom: 16,
+        timeout: 20000
+      });
 
       // 定期的に位置情報を更新（適宜調整）
       setInterval(() => {
         sendLocationToServer();
         updateLocation();
-      }, 1000); // 5秒ごとに更新
+
+        //alert(spot_latitudes)
+        map.on('locationfound', onLocationFound);
+        map.on('locationerror', onLocationError);
+
+        map.locate({
+          //setView: true,
+          //maxZoom: 16,
+          timeout: 20000
+        });
+
+      }, 5000); // 5秒ごとに更新
     </script>
 
     <form action="/loop_speech_recognition" method="get">
