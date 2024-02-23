@@ -1,29 +1,41 @@
 {% extends "base.html" %}
 {% block content %}
-    <h1>Sign Up</h1>
-    <form method="post" novalidate>
-        {{form.hidden_tag()}}
-        <p>
-            {{form.username.label}}<br>
-            {{form.username(size=32)}}<br>
-            {% for error in form.username.errors %}
-                <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-        <p>
-            {{form.email.label}}<br>
-            {{form.email(size=32)}}<br>
-            {% for error in form.email.errors %}
-                <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-        <p>
-            {{form.password.label}}<br>
-            {{form.password(size=32)}}
-            {% for error in form.password.errors %}
-                <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-        {{ form.submit() }}
-    </form>
+    <div class="slide">
+        <!-- <div class="slide-image-ky" ></div>
+        <div class="slide-image-ko" ></div>
+        <div class="slide-image-o" ></div> -->
+        <div class="slide-image" style="background-image: url('./static/signup/img/京都観光.jpg');"></div>
+        <div class="slide-image" style="background-image: url('./static/signup/img/EBP10-41391A.jpg');"></div>
+        <div class="slide-image" style="background-image: url('./static/signup/img/spot-osaka-key2023.jpg');"></div>  
+        <div id="form-main">
+            <div id="form-div">
+                <form class="form" id="form1" method="post" novalidate>
+                    {{form.hidden_tag()}}
+                    <h1>関西ええgent-SignUp</h1>
+                    <p class="name">
+                        {{form.username(class_="feedback-input")}}<br>
+                        {% for error in form.username.errors %}
+                            <span style="color: red;">[{{ error }}]</span>
+                        {% endfor %}
+                    </p>
+                    <p class="email">
+                        {{form.email(class_="feedback-input")}}<br>
+                        {% for error in form.email.errors %}
+                            <span style="color: red;">[{{ error }}]</span>
+                        {% endfor %}
+                    </p>
+                    <p>
+                        {{form.password(class_="feedback-input")}}
+                        {% for error in form.password.errors %}
+                            <span style="color: red;">[{{ error }}]</span>
+                        {% endfor %}
+                    </p>
+                    <div class="submit">
+                        {{ form.submit() }}
+                        <div class="ease"></div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 {% endblock %}

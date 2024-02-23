@@ -6,8 +6,8 @@
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
-        <link rel="stylesheet" href="./assets/signup/css/sanitize.css">
-        <link rel="stylesheet" href="./assets/signup/css/style.css">
+        <link rel="stylesheet" href="{{ url_for('static', filename = 'signup/css/sanitize.css') }}">
+        <link rel="stylesheet" href="{{ url_for('static', filename = 'signup/css/style.css') }}">
         {% if title %}
         <title>{{ title }} - 関西良いとこええgent</title>
         {% else %}

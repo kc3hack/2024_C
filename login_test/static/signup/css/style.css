@@ -218,7 +218,7 @@ input:focus, textarea:focus {
 	height: 100%;
 	opacity: 0;
 	animation: slider-1 24s linear infinite;
-	background-image: url("{{url_for('static', filename = 'signup/img/京都観光.jpg')}}");
+	background-image: url("../img/京都観光.jpg");
 }
 
 .slide-image-o {
@@ -237,7 +237,7 @@ input:focus, textarea:focus {
 	height: 100%;
 	opacity: 0;
 	animation: slider-1 24s linear infinite;
-	background-image: url("{{url_for('static', filename = 'signup/img/spot-osaka-key2023.jpg')}}");
+	background-image: url("../img/spot-osaka-key2023.jpg");
 }
 
 .slide-image-ko {
@@ -256,8 +256,9 @@ input:focus, textarea:focus {
 	height: 100%;
 	opacity: 0;
 	animation: slider-1 24s linear infinite;
-	background-image: url("{{url_for('static', filename = 'signup/img/EBP10-41391A.jpg')}}");
+	background-image: url("../img/EBP10-41391A.jpg");
 }
+
   
 .slide-image:nth-child(1) {
 	background-image: url("../img/京都観光.jpg");

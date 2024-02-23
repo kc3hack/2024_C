@@ -1,4 +1,9 @@
-from flask import Flask, redirect, url_for, render_template, flash
+'''
+起動方法
+app.pyがあるディレクトリで"flask run"を実行
+'''
+
+from flask import Flask, redirect, url_for, render_template, flash, request
 from flask_login import current_user, login_user, logout_user, login_required
 from config import Config
 from flask_sqlalchemy import SQLAlchemy
@@ -7,6 +12,7 @@ import flask_login
 from forms import LoginForm, SignUpForm, AddSpotForm
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
+import pandas
 
 
 mainapp = Flask(__name__)
@@ -20,6 +26,42 @@ login_manager.init_app(mainapp)
 def getNearbySpots(longnitude, latitude):
     pass
 
+#じゃらんのデータを抽出(データが追加されていない時に実行)
+fileDataFmt = "dataToImport/utf8d/include_data_activity" #csvファイルがあるフォルダ参照
+dataExtention = ".csv"
+def convert_csv_data_to_db():
+    for i in range(1, 6): #全てのCSVに対して
+        data = pandas.read_csv(fileDataFmt + str(i) + dataExtention, header=None) #Csv読み込み
+        for d in data.values:
+            newSpot = Spot()#隠れスポット定義
+            try:
+                #隠れスポットの情報を追加。種類については未記載のため-1とする。
+                #緯度・経度情報は不正な値が入らないよう数値かチェックする
+                newSpot = Spot(name=d[1], overview = d[6], type = -1, detail = d[7], longitude = float(d[8]), latitude = float(d[9]))
+            except Exception as e:
+                #フォーマットに問題があるデータはエラー出力をしてスキップする。
+                print("Data Passed")
+                print(d)
+                print(f"Reason < {e.__class__.__name__} : {e.args}>")
+            prefName = d[2]
+            #地域の文字列情報をDB用の数値に変換
+            if prefName == '京都':
+                newSpot.pref = 0
+            elif prefName == '大阪':
+                newSpot.pref = 1
+            elif prefName == '兵庫':
+                newSpot.pref = 2
+            elif prefName == '滋賀':
+                newSpot.pref = 3
+            elif prefName == '奈良':
+                newSpot.pref = 4
+            elif prefName == '和歌山':
+                newSpot.pref = 5
+            else:
+                newSpot.pref = -1
+            Spot.query.session.add(newSpot)  #スポットの情報を追加
+            Spot.query.session.commit()  #DBに反映
+                
 class User(UserMixin, db.Model):#ユーザーモデル
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(16), index=True, unique=True)
@@ -44,7 +86,7 @@ class Spot(db.Model):
     id = db.Column(db.Integer, primary_key=True) #固有ID
     name = db.Column(db.String(128), index=True) #隠れスポットの名前(なるべく正式名称で入れてもらう)
     type= db.Column(db.Integer)#隠れスポットの種類
-    pref = db.Column(db.Integer)#隠れスポットが所在する県　#0 : 京都 1 : 神戸 2 : 大阪 3 : その他
+    pref = db.Column(db.Integer)#隠れスポットが所在する県　#0 : 京都, 1 : 大阪, 2 : 兵庫, 3 : 滋賀, 4:奈良, 5:和歌山
     overview = db.Column(db.String(128), index=True)
     detail = db.Column(db.Text) #隠れスポットの概要
     longitude = db.Column(db.Float, index=True)#緯度
@@ -59,7 +101,7 @@ class RejectedSpot(db.Model):
     name = db.Column(db.String(128), index=True)
     detail = db.Column(db.Text)
     overview = db.Column(db.String(128), index=True)
-    longnitude = db.Column(db.Float, index=True)
+    longitude = db.Column(db.Float, index=True)
     latitude = db.Column(db.Float, index=True)
 
     def __repr__(self):
@@ -123,7 +165,7 @@ def map():
 @login_required
 def add_spot():
     form = AddSpotForm()
-    if form.validate_on_submit():
+    if form.validate_on_submit() and request.method == "POST":
         newSpot = Spot(name = form.spot_name.data, longitude = form.longnitude.data, 
                        latitude = form.latitude.data, overview = form.spot_overview.data,
                        detail = form.spot_detail.data, type = int(form.spot_type.data),
@@ -134,4 +176,4 @@ def add_spot():
     return render_template('addSpot.html', form = form)
 
 if __name__ == "__main__":
-    mainapp.run(debug=True, port=8000)
+    mainapp.run(debug=True, port=8000, host="0.0.0.0")
