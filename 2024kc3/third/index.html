@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 
 <head>
   <title>Leaflet</title>
@@ -8,49 +8,100 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.3.1/dist/leaflet.css"
     integrity="sha512-Rksm5RenBEKSKFjgI3a41vrjkw4EVPlJ3+OiI65vTjIdo9brlAacEuKOiQ5OFh7cOI1bkDwLqdLw3Zg0cRJAAQ=="
     crossorigin="">
-  <link rel="stylesheet" href="./css/sanitize.css">
   <link rel="stylesheet" href="./css/style.css">
   <script src="https://unpkg.com/leaflet@1.3.1/dist/leaflet.js"
     integrity="sha512-/Nsx9X4HebavoBvEBuyp3I7od5tA0UzAxs+j83KgC8PU0kgB4XiK4Lfe4y4cgBtaRJQEIFCW+oC506aPT2L1zw=="
     crossorigin=""></script>
-  
-    
 </head>
 
 <body>
+
+<p class="head-line">関西えぇgent</p>
+
   <div id="mapid"></div>
 
   <script>
+    // Leafletの地図を作成
     var mymap = L.map('mapid');
 
+    // OpenStreetMapのタイルレイヤーを追加
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 18,
-      attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, '
+      attribution: '地図データ &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors'
     }).addTo(mymap);
 
-    /* 位置情報取得成功処理*/
+    // マーカーとサークルをまとめるレイヤーグループ
+    var markerGroup = L.layerGroup().addTo(mymap);
+
+    // 位置情報取得成功時の処理
     function onLocationFound(e) {
-      var radius = e.accuracy / 3;
-      /* マーカーを表示*/
-      L.marker(e.latlng).addTo(mymap)
-        .bindPopup("現在地").openPopup();
-      /* サークルを表示*/
-      L.circle(e.latlng, radius).addTo(mymap);
+      var radius = e.accuracy / 2;
+
+      // すでにマーカーグループに要素があればクリア
+      markerGroup.clearLayers();
+
+      // 現在地にマーカーとサークルを表示
+      var marker = L.marker(e.latlng).bindTooltip("現在地").addTo(markerGroup);
+      L.circle(e.latlng, { radius: 200 }).addTo(markerGroup);
+
+      // マーカーにクリックイベントを追加
+      marker.on('click', function (e) {
+        // マーカーをクリックしたときに画像を表示
+        var imgSrc = 'https://4.bp.blogspot.com/-7T-JzvxK5y0/UNO15R_x8oI/AAAAAAAAIvY/q6WNM45XVhE/s1600/number_1.png';
+        this.bindPopup("<img src='" + imgSrc + "' width='50' height='50'>").openPopup();
+      });
     }
 
+    // 位置情報取得失敗時の処理
     function onLocationError(e) {
       alert("現在地を取得できませんでした。" + e.message);
     }
 
+    // 位置情報を取得して地図を表示
     mymap.on('locationfound', onLocationFound);
     mymap.on('locationerror', onLocationError);
 
+    // 一定の間隔で位置情報を取得
+    setInterval(function () {
+      mymap.locate({
+        setView: true,
+        maxZoom: 16,
+        timeout: 20000
+      });
+    }, 60000);  // 1分ごとに実行 (1 * 60 * 1000 milliseconds)
+
+    // 最初の位置情報取得を行う
     mymap.locate({
       setView: true,
       maxZoom: 16,
       timeout: 20000
     });
   </script>
+
+  <p class="question">
+    <button>
+      
+      <a href="http://www.google.com/" class="">えぇgentに質問</a>
+      
+    </button>
+  </p>
+
+<section>
+  <h1>よくある質問</h1>
+  <table>
+    <tr>
+      <td>1</td>
+    </tr>
+    <tr>
+      <td>2</td>
+    </tr>
+    <tr>
+      <td>3</td>
+    </tr>
+  
+  </table>
+</section>
+  
 </body>
 
 </html>
