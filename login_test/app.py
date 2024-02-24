@@ -3,17 +3,23 @@
 app.pyがあるディレクトリで"flask run"を実行
 '''
 
-from flask import Flask, redirect, url_for, render_template, flash, request
+from flask import Flask, redirect, url_for, render_template, flash, request, session, send_file
 from flask_login import current_user, login_user, logout_user, login_required
 from config import Config
 from flask_sqlalchemy import SQLAlchemy
-import flask_sqlalchemy
+from flask_socketio import SocketIO
 from flask_migrate import Migrate
 import flask_login
 from forms import LoginForm, SignUpForm, AddSpotForm
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
 import pandas
+from TTS_voicevox_local_api_file_write import TTC_voicevox_local_api_chara #TTS
+import GPSAddressDistance
+import os
+from GPT35_turbo_RAG import llm_communication, llm_preparation
+import time
+from Sentenc_Sim import detect_selected_num
 
 mainapp = Flask(__name__)
 mainapp.config.from_object(Config)
@@ -21,6 +27,9 @@ db = SQLAlchemy(mainapp)
 migrate = Migrate(mainapp, db)
 login_manager = flask_login.LoginManager()
 login_manager.init_app(mainapp)
+socketio = SocketIO(mainapp)
+INITIALIZED_KEY = 'initialized'
+TTS_zundamon_class = TTC_voicevox_local_api_chara(speaker=2)
 
 #近くのスポットを抽出(まだ未実装)
 def getNearbySpots(longnitude, latitude):
@@ -166,10 +175,317 @@ def logout():
 def index():
     return render_template('index.html', title='Sign In')
 
-@mainapp.route('/communication')
+
+STATE_LIST = {"selection":1, "confirmation":2, "overview":3, "communication":4}
+
+SESSION_INIT = True
+
+"""
+LLM初期化したときのものを保存する変数 golbal変数とする
+"""
+list_index = ""
+hogen_llm = ""
+hogen_tag = ""
+
+
+@mainapp.route('/loop_speech_recognition')
 @login_required
-def communication():
-    return 'aaaaaa'
+def loop_speech_recognition():
+    global SESSION_INIT
+    global list_index, hogen_llm, hogen_tag 
+
+
+    spot_num = 10
+
+
+    #global state
+    #global reconized_text
+
+    audio_changed = 0 # 0:音声ファイルが同じ(同じ内容を話している)
+                      # 1:音声ファイルが異なる(違う内容を話している)
+
+    # 音声ファイルのパス
+    file_path = "./music/output.wav"
+
+
+    # セッションから初期化フラグを取得
+    initialized = session.get(INITIALIZED_KEY, False)
+    print("Session=", session)
+
+    # 初回アクセス時に初期化
+    if not initialized:
+
+        print("initializedされました")
+        session[INITIALIZED_KEY] = True
+        session['state'] = STATE_LIST['selection']
+        session['reconized_text'] = ""
+        session['selected_spot'] = 1
+        session['isAudioUpdated'] = "再生済" #音声ファイルが更新されたかどうか 0変わらない, 1更新された
+        session['speech_text'] = ""
+
+        session['my_latitude'] = 0
+        session['my_longitude'] = 0
+
+        session['communication_count'] = 0 #対話回数を保持する
+
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            print("古いファイルを削除しました")
+
+        session['speech_text'] = "1から10までの好きなスポットを選んでくれへん?"
+        TTS_zundamon_class.TTS_main(session['speech_text'], path=file_path) #音声合成をする
+        session['isAudioUpdated'] = "未再生"
+
+        #付近の近い10スポット
+
+        """
+        0     1     2    3        4    5     6    7     8     9
+        種類, 名前, 地域, 口コミ数, URL, 住所, 概要, 説明, 経度, 緯度
+        """
+        """
+        session['near_spots_kind'] = SessionList([""]*10)          #種類
+        session['near_spots_name'] = SessionList([""]*10)          #名前
+        session['near_spots_prefecture'] = SessionList([""]*10)    #地域
+        session['near_spots_kuchikomi_num'] = SessionList([0]*10)  #口コミ数
+        session['near_spots_URL'] = SessionList([""]*10)           #URL
+        session['near_spots_address'] = SessionList([""]*10)       #住所
+        session['near_spots_abstract'] = SessionList([""]*10)      #概要
+        session['near_spots_explanation'] = SessionList([""]*10)   #説明
+        session['near_spots_latitude'] = SessionList([0]*10)       #緯度(順序 逆)
+        session['near_spots_longitude'] = SessionList([0]*10)      #経度(順序 逆)
+        session.modified = True
+        """
+
+        for i in range(10):
+            session['near_spots' + str(i)] = {
+                "kind":"", #種類
+                "name":"", #名前
+                "prefecture":"", #地域
+                "kuchikomi_num":0, #口コミ数
+                "URL":"", #URL
+                "address":"", #住所
+                "abstract":"", #概要
+                "explanation":"", #説明
+                "latitude":"", #緯度
+                "longitude":"" #経度
+            }
+
+
+        
+
+        initialized = True    
+
+
+
+    
+    #print("session['near_spots']=" + str(session['near_spots']))
+
+    #reconized_text = ""
+
+    
+    #POSTのとき音声認識の結果を取得する
+    if request.method == 'POST':
+        #reconized_text = request.form["endMsg"] 
+
+        if request.form.get("reconized_text") != "":
+            session['reconized_text'] = request.form.get("reconized_text")
+
+        """
+        POSTを投げなくても発話できるようにする
+        """
+
+        #audio_changed = request.form.get("result_text")
+        #print("reconized_text=" + str(reconized_text))
+        #print("audio_changed=" + str(audio_changed))
+        #print("audio_chaged=" + str(audio_changed))
+        print("session['isAudioUpdated']=" + str(session['isAudioUpdated']))
+        print("session['reconized_text']=" + str(session['reconized_text']))
+        print("session['state']=" + str(session['state']))
+
+
+
+        
+            
+        #time.sleep(5)
+        #print("音楽ファイルを生成する")
+
+        #以前のファイルがあれば削除する
+
+        #ユーザーに選択させる段階である場合
+        if session['state'] == STATE_LIST['selection']:
+    
+
+            time.sleep(3)
+
+            if request.form.get("reconized_text") != "":
+                session['reconized_text'] = request.form.get("reconized_text")
+
+            try:    
+                #成功した上で, 何か話していたら
+                if session['reconized_text'] != "":
+                    #time.sleep(3)
+                    session['state'] = STATE_LIST['confirmation']
+
+                    #return redirect('get_audio')
+
+            except Exception:
+                pass
+
+            print("session['state']=" + str(session['state']))
+
+            return render_template('loop_speech_recognition.html', audio_chaged=session['isAudioUpdated'], speech_text=session['speech_text']) #html側でこの変数todoを扱えるようにする
+
+
+
+        #ユーザーに確認させる段階である場合
+        if session['state'] == STATE_LIST['confirmation']:
+
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                print("古いファイルを削除しました")
+
+            try:    
+                session['selected_spot'] = detect_selected_num(session['reconized_text'], spot_num)
+                
+                print("selected_num=" + str(session['selected_spot']))
+                
+                Top_10_nearest_spots = GPSAddressDistance.getNearestSpotByDistance(session['my_latitude'], session['my_longitude'])
+                
+                #京都府の場合は京都弁になる
+                if Top_10_nearest_spots[int(session['selected_spot'])-1][2] == "京都府":
+                    session['speech_text'] = str(session['selected_spot']) + "番目のスポットにおいでやす"
+
+                #兵庫県の場合は神戸弁になる
+                elif Top_10_nearest_spots[int(session['selected_spot'])-1][2] == "兵庫県":
+                    session['speech_text'] = str(session['selected_spot']) + "番目のスポットにしとう"
+
+                #それ以外の場合は大阪弁になる
+                else:
+                    session['speech_text'] = str(session['selected_spot']) + "番目のスポットにするんか"
+                
+                
+                TTS_zundamon_class.TTS_main(session['speech_text'], path=file_path) #音声合成をする
+                
+                session['isAudioUpdated'] = "未再生"
+                #time.sleep(4)
+                session['state'] = STATE_LIST['overview']
+
+            except Exception:
+                pass
+            
+            return render_template('loop_speech_recognition.html', audio_chaged=session['isAudioUpdated'], speech_text=session['speech_text']) #html側でこの変数todoを扱えるようにする
+
+
+
+
+        #概要解説
+        if session['state'] == STATE_LIST['overview']:
+
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                print("古いファイルを削除しました")
+
+            try:    
+                print("selected_num=" + str(session['selected_spot']))
+                #print("session['near_spots_abstract']=" + str(session['near_spots_abstract']))
+                #time.sleep(2)
+                #session['speech_text'] = str(session['selected_spot']) + "番目のスポットは" + session['near_spots' + str(['selected_spot'] + 1)]["abstract"] + "感じのスポットやねん"
+                Top_10_nearest_spots = GPSAddressDistance.getNearestSpotByDistance(session['my_latitude'], session['my_longitude'])
+                
+                #京都府の場合は京都弁になる
+                if Top_10_nearest_spots[int(session['selected_spot'])-1][2] == "京都府":
+                    session['speech_text'] = str(session['selected_spot']) + "番目は" + Top_10_nearest_spots[session['selected_spot']-1][1] + "って名前やし" + Top_10_nearest_spots[int(session['selected_spot'])-1][6] + "感じのスポットにならはるわ"
+
+                #兵庫県の場合は神戸弁になる
+                elif Top_10_nearest_spots[int(session['selected_spot'])-1][2] == "兵庫県":
+                    session['speech_text'] = str(session['selected_spot']) + "番目は" + Top_10_nearest_spots[session['selected_spot']-1][1] + "ちゅうところで" + Top_10_nearest_spots[int(session['selected_spot'])-1][6] + "感じのスポットみたいやな"
+
+                #それ以外の場合は大阪弁になる
+                else:
+                    session['speech_text'] = str(session['selected_spot']) + "番目は" + Top_10_nearest_spots[session['selected_spot']-1][1] + "ちゅうところで" + Top_10_nearest_spots[int(session['selected_spot'])-1][6] + "感じのスポットになっとってん"
+                
+                TTS_zundamon_class.TTS_main(session['speech_text'], path=file_path) #音声合成をする
+                
+                #time.sleep(4)
+                
+                session['isAudioUpdated'] = "未再生"
+                session['state'] = STATE_LIST['communication']
+
+            except Exception:
+                pass
+            
+            return render_template('loop_speech_recognition.html', audio_chaged=session['isAudioUpdated'], speech_text=session['speech_text']) #html側でこの変数todoを扱えるようにする
+
+
+        #対話(具体的な説明)
+        if session['state'] == STATE_LIST['communication']:
+            
+
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                print("古いファイルを削除しました")
+
+            try:
+                #音声を取得する
+                #session['reconized_text'] = request.form.get("reconized_text")
+                    
+                #GPS情報を取得する
+                Top_10_nearest_spots = GPSAddressDistance.getNearestSpotByDistance(session['my_latitude'], session['my_longitude'])
+                
+
+                if session['communication_count'] == 0:
+                    #LLMを初期化する
+                    list_index, hogen_llm, hogen_tag = llm_preparation(Top_10_nearest_spots[int(session['selected_spot'])-1])
+                    session['communication_count'] = 1
+                    
+
+                #質問に対する返答を作成する
+
+                if session['reconized_text'] != "":
+                    session['speech_text'] = llm_communication(list_index, hogen_llm, hogen_tag, reconized_text=session['reconized_text'])
+
+                else:
+                    session['speech_text'] = "なんか質問はあるん?"
+
+
+                TTS_zundamon_class.TTS_main(session['speech_text'], path=file_path) #音声合成をする
+
+
+                session['isAudioUpdated'] = "未再生"
+            
+
+            except Exception:
+                pass
+
+            return render_template('loop_speech_recognition.html', audio_chaged=session['isAudioUpdated'], speech_text=session['speech_text']) #html側でこの変数todoを扱えるようにする
+
+
+
+
+    else:
+        return render_template('loop_speech_recognition.html', audio_chaged=session['isAudioUpdated'], speech_text=session['speech_text']) #html側でこの変数todoを扱えるようにする
+
+@mainapp.route('/get_audio')
+def get_audio():
+
+	
+	"""
+	res = requests.post(
+            f"http://127.0.0.1:5000/get_audio",
+        )
+	"""
+
+	#print("res=" + str(res))
+	
+
+	#print("get_audio_called")
+
+    # 仮に新しいwavファイルを作成するとします
+    # この部分を実際のwavデータ生成ロジックに置き換えてください
+    # ここでは例として同一ディレクトリ内のsample.wavを使用しています
+	return send_file('./music/output.wav', mimetype='audio/wav')
+
+
 
 @mainapp.route('/map')
 @login_required
