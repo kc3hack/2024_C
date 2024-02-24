@@ -1,0 +1,34 @@
+
+
+
+
+#ノートPC Windows  
+.
+└── python
+    ├── サーバやhttpとsocket通信
+    │   ├── flask        :webアプリケーションの作成
+    │   ├── sqlalchemy   :データベースの操作
+    │   ├── requests　   :httpリクエストの取得
+    │   ├── BeautifulSoup:じゃらん様サイトのhtmlデータの抽出
+    │   ├── json         :json形式データの操作
+    │   └── urllib       :日本語URLの符号化
+    ├── 言語処理
+    │   ├── llama_index  :RAGによる大規模言語モデルの外部知識参照
+    │   ├── langchain   :大規模言語モデルの会話の記憶
+    │   ├── Levenshtein :レーベンシュタイン距離による文字列類似度
+    │   └── re          :正規表現
+    ├── ファイル入出力
+    │   ├── numpy       :音声ファイル読込み
+    │   ├── scipy       :音声ファイル書き出し
+    │   ├── csv         :じゃらん様から取得させて頂いたデータの保管
+    │   └── os          :ファイル操作
+    └── その他
+        ├── geopy　　　  :緯度経度での距離計算
+        └── time        :プログラム内での一時停止
+.
+└── ソフトウェア
+    └── VOICEVOX:春日部つむぎ :音声合成 
+.
+└── API
+    ├── OpenAIのgpt3.5-turbo :大規模言語モデル
+    └── https://msearch.gsi.go.jp/address-search/AddressSearch :国土交通省 住所のGPSへの変換
