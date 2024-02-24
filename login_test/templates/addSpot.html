@@ -1,50 +1,72 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <h1>隠れスポット登録</h1>
-    <form method="post" novalidate>
-        {{form.hidden_tag()}}
-        <p>
-            {{form.spot_name.label}}<br>
-            {{form.spot_name(size=256)}}<br>
-            {% for error in form.spot_name.errors %}
-                <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-        <p>
-            {{form.longnitude.label}}<br>
-            {{form.longnitude(size=256)}}<br>
-            {% for error in form.longnitude.errors %}
-                <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-        <p>
-            {{form.latitude.label}}<br>
-            {{form.latitude(size=256)}}<br>
-            {% for error in form.latitude.errors %}
-                <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-        <p>
-            {{form.spot_place}}
-        </p>
-        <p>
-            {{form.spot_type}}
-        </p>
-        <p>
-            {{form.spot_overview.label}}<br>
-            {{form.spot_overview(size=100)}}<br>
-            {% for error in form.spot_overview.errors %}
-                <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-        <p>
-            {{form.spot_detail.label}}<br>
-            {{form.spot_detail(size=100)}}<br>
-            {% for error in form.spot_detail.errors %}
-                <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-        {{form.submit()}}
-    </form>
+    <h1 class="h1">関西えぇgent</h1>
+    <section class="section">
+        <h1 class="section-headline">スポット登録</h1>
+        <form class="form" method="post" novalidate>
+            {{form.hidden_tag()}}
+            <table class="form-table">
+                <tr>
+                    <th>{{form.spot_name.label}}</th>
+                    <td>
+                        {{form.spot_name(size=256, class_="input")}}
+                        {% for error in form.spot_name.errors %}
+                        <span style="color: red;">[{{ error }}]</span>
+                        {% endfor %}
+                    </td>
+                </tr>
+                <tr>
+                    <th>{{form.latitude.label}}</th>
+                    <td>
+                        {{form.latitude(size=256, class_="input")}}
+                        {% for error in form.latitude.errors %}
+                        <span style="color: red;">[{{ error }}]</span>
+                        {% endfor %}
+                    </td>
+                </tr>
+                <tr>
+                    <th>{{form.longitude.label}}</th>
+                    <td>
+                        {{form.longitude(size=256, class_="input")}}
+                        {% for error in form.longitude.errors %}
+                        <span style="color: red;">[{{ error }}]</span>
+                        {% endfor %}
+                    </td>
+                </tr>
+                <tr>
+                    <th>地域</th>
+                    <td>
+                        {{form.spot_place(class_="select")}}
+                    </td>
+                </tr>
+                <tr>
+                    <th>種類</th>
+                    <td>
+                        {{form.spot_type(class_="select")}}
+                    </td>
+                </tr>
+
+                <tr>
+                    <th>{{form.spot_overview.label}}</th>
+                    <td>
+                        {{form.spot_overview(size=100, class_="input")}}
+                        {% for error in form.latitude.errors %}
+                        <span style="color: red;">[{{ error }}]</span>
+                        {% endfor %}
+                    </td>
+                </tr>
+                <tr>
+                    <th>{{form.spot_detail.label}}</th>
+                    <td>
+                        {{form.spot_detail(size=256, class_="textarea")}}
+                        {% for error in form.spot_detail.errors %}
+                        <span style="color: red;">[{{ error }}]</span>
+                        {% endfor %}
+                    </td>
+                </tr>
+            </table>
+            {{form.submit(class_="button")}}
+        </form>
+    </section>
 {% endblock %}
