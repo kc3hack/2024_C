@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
+    />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.2/socket.io.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href=".static/css/ajax_map_sanitize.css">
+    <link rel="stylesheet" href=".static/css/ajax_map_style.css">
+    <link rel="stylesheet" href="./css/style.css">
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <title>Real-time Map</title>
+    <style>
+      #map {
+        height: 400px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1 class="head-line">関西えぇgent</h1>
+    <div id="map" style="width:600px;height:600px"></div>
+
+    <form id="my_position_form"  method="POST">
+			緯度<input name="my_latitude" id="my_latitude" value=0></input>
+			経度<input name="my_longitude" id="my_longitude" value=0></input>
+		</form>
+
+    <ul id="coordinatesList"></ul>
+
+    <div class="question">
+      <form action="/loop_speech_recognition" method="get">
+        <input type="submit" value='音声ページへ行く!' class="button">
+      </form>
+    </div>
+
+    <section>
+      <h2>よくある質問</h2>
+      <table>
+        <tr>
+          <td>1</td>
+        </tr>
+        <tr>
+          <td>2</td>
+        </tr>
+        <tr>
+          <td>3</td>
+        </tr>
+      
+      </table>
+    </section>
+
+    <script>
+      const map = L.map('map').setView([35.6895, 139.6917], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+      
+      const socket = io.connect('http://' + document.domain + ':' + location.port);
+
+      socket.on('connect', () => {
+        console.log('Connected to server');
+      });
+
+      socket.on('disconnect', () => {
+        console.log('Disconnected from server');
+      });
+      
+
+      
+      socket.on('location_processed', (data) => {
+        console.log('Server processed location:', data);
+        
+        // 位置情報を Leaflet マップ上に表示
+        const { latitude, longitude } = data;
+        const marker = L.marker([latitude, longitude]).addTo(map);
+        map.panTo([latitude, longitude]);
+      });
+
+      var spot_latitudes = []; //隠れスポットの緯度
+      var spot_longitudes = []; //隠れスポットの経度
+
+      //10個の座標を表示する
+      socket.on('coordinates', (data) => {
+          console.log('Received coordinates:', data);
+          //alert("座標がとどいた")
+
+          const coordinatesList = document.getElementById('coordinatesList');
+          const listItem = document.createElement('li');
+          //listItem.textContent = `[${data.num}] Name: ${data.name}, Latitude: ${data.latitude}, Longitude: ${data.longitude}`;
+          listItem.innerHTML = `[${data.num}] スポット名:${data.name} 住所:${data.address}<br />`;
+          //alert(data.latitude)
+          spot_latitudes.push(data.latitude)
+          spot_longitudes.push(data.longitude)
+
+          //alert(spot_latitudes)
+
+          coordinatesList.appendChild(listItem);
+      });
+      
+      
+      
+
+      function updateMapView(latitude, longitude) {
+        map.setView([map.latitude, map.longitude], map.getZoom());
+        //map.setView([latitude, longitude], 13);
+      }
+
+
+
+      /* 位置情報取得成功処理*/
+      function onLocationFound(e) {
+        //var radius = e.accuracy / 3;
+
+        /* マーカーを表示*/
+        L.marker(e.latlng).addTo(map).bindPopup("現在地").openPopup();
+        
+        for (let i = 0; i < 10; i++){
+          L.marker([spot_latitudes[i], spot_longitudes[i]]).addTo(map) //.bindPopup("てすと").openPopup();
+        }
+        
+        //L.marker([35.7, 139.8]).addTo(map) //.bindPopup("てすと").openPopup();
+
+
+        /* サークルを表示*/
+        //L.circle(e.latlng, radius).addTo(map);
+        //alert(e.latlng)
+      }
+
+
+
+      var radius = 2000
+
+      //現在地の半径2[km]に円を描写
+      function onLocationFound_draw_circle(e) {
+
+        /* サークルを表示*/
+        L.circle(e.latlng, radius).addTo(map);
+
+      }
+
+
+
+      function onLocationError(e) {
+        alert("現在地を取得できませんでした。" + e.message);
+      }
+
+
+
+      function updateLocation() {
+        if ('geolocation' in navigator) {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              const { latitude, longitude } = position.coords;
+              //updateMapView(latitude, longitude);
+
+              document.getElementById('my_latitude').value = latitude;
+				      document.getElementById('my_longitude').value = longitude;
+            },
+            (error) => {
+              console.error('Error getting location:', error);
+            }
+          );
+        } else {
+          console.error('Geolocation is not supported by your browser');
+        }
+      }
+
+      // 現在地情報をサーバーに送信
+      function sendLocationToServer() {
+        if ('geolocation' in navigator) {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              const { latitude, longitude } = position.coords;
+
+              // 現在地情報をサーバーに送信
+              socket.emit('update_location', { latitude, longitude });
+            },
+            (error) => {
+              console.error('Error getting location:', error);
+            }
+          );
+        } else {
+          console.error('Geolocation is not supported by your browser');
+        }
+      }
+
+
+      // 初回の位置情報更新
+      sendLocationToServer();
+      updateLocation();
+      map.on('locationfound', onLocationFound);
+      map.on('locationerror', onLocationError);
+
+      map.on('locationfound', onLocationFound_draw_circle);
+
+      map.locate({
+        setView: true,
+        //maxZoom: 16,
+        timeout: 20000
+      });
+
+      // 定期的に位置情報を更新（適宜調整）
+      setInterval(() => {
+        sendLocationToServer();
+        updateLocation();
+
+        //alert(spot_latitudes)
+        map.on('locationfound', onLocationFound);
+        map.on('locationerror', onLocationError);
+
+        map.locate({
+          //setView: true,
+          //maxZoom: 16,
+          timeout: 20000
+        });
+
+      }, 5000); // 5秒ごとに更新
+    </script>
+
+  </body>
+</html>

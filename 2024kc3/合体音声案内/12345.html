@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.2/socket.io.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <title>えぇgentとおしゃべりしよう!</title>
+</head>
+
+<body>
+    <div class="head-line">
+        <h1>音声認識による対話</h1>
+    </div>
+
+    <div id="container">
+        <p>10個のスポット</p>
+        <ul id="coordinatesList"></ul>
+    </div>
+
+    <script>
+        const socket = io.connect('http://' + document.domain + ':' + location.port);
+
+        socket.on('connect', () => {
+            console.log('Connected to server');
+        });
+
+        socket.on('coordinates', (data) => {
+            console.log('Received coordinates:', data);
+
+            const coordinatesList = document.getElementById('coordinatesList');
+            const listItem = document.createElement('li');
+            listItem.innerHTML = `[${data.num}] スポット名:${data.name} 住所:${data.address}<br />`;
+            coordinatesList.appendChild(listItem);
+        });
+
+        function sendLocationToServer() {
+            if ('geolocation' in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const { latitude, longitude } = position.coords;
+                        socket.emit('update_location', { latitude, longitude });
+                    },
+                    (error) => {
+                        console.error('Error getting location:', error);
+                    }
+                );
+            } else {
+                console.error('Geolocation is not supported by your browser');
+            }
+        }
+
+        sendLocationToServer();
+
+        setInterval(() => {
+            sendLocationToServer();
+        }, 5000); // 5秒ごとに更新
+    </script>
+
+<button id="playButton" class="start">音を鳴らす</button>
+<p>Agant: {{speech_text}}</p>
+
+<form autocomplete="off" name="result_form" id="result_form_id" action="{{ url_for('loop_speech_recognition') }}"
+    method="POST">
+    <label for="result_text">音声を再生したかどうか</label>
+    <input type="text" id="audio_result_show" name="audio_result_value" value={{audio_chaged}} readonly>
+</form>
+
+    <script>
+        let audio = new Audio();
+        let currentETag = null;
+        let isUpdateScheduled = false;
+        let isPlaying = false;
+        let isAudioPlayed_change = {{ audio_chaged | tojson }};
+
+        document.getElementById('playButton').addEventListener('click', () => {
+            if (!isPlaying) {
+                isPlaying = true;
+                audio.play();
+
+                if (!isUpdateScheduled) {
+                    isUpdateScheduled = true;
+                    updateAudio();
+                }
+
+                audio.addEventListener('ended', () => {
+                    console.log('音声ファイルの再生が終了しました');
+                    isPlaying = false;
+
+                    isAudioPlayed_change = "再生済";
+                    var audio_result_obj = document.getElementById(id="audio_result_show")
+                    audio_result_obj.value = isAudioPlayed_change;
+
+                    document.my_form.submit();
+                });
+            }
+        });
+
+        function updateAudio() {
+            fetch('/get_audio', {
+                headers: {
+                    'If-None-Match': currentETag
+                }
+            })
+                .then(response => {
+                    if (response.status === 304) {
+                        return Promise.reject('Not Modified');
+                    } else if (response.status === 200) {
+                        currentETag = response.headers.get('ETag');
+                        return response.blob();
+                    } else {
+                        return Promise.reject('Unexpected status: ' + response.status);
+                    }
+                })
+                .then(blob => {
+                    audio.src = URL.createObjectURL(blob);
+                    audio.play();
+                    isUpdateScheduled = false;
+                })
+                .catch(error => {
+                    if (error !== 'Not Modified') {
+                        console.error('Failed to update audio:', error);
+                    }
+                    isUpdateScheduled = false;
+                });
+        }
+    </script>
+
+   
+    <form autocomplete="off" name="my_form" id="reconized_form" action="{{ url_for('loop_speech_recognition') }}" method="POST">
+        <label for="reconized_text">認識結果: </label>
+        <input type="text" id="myobj" name="reconized_text" value="">
+        <input type="submit" value="送信">
+    </form>
+
+    <script>
+        const textDisplay = document.querySelector('.recognize-text');
+        let speech_recognition_state = 1;
+
+        try {
+            window.SpeechRecognition = window.SpeechRecognition || webkitSpeechRecognition;
+            const recognition = new webkitSpeechRecognition();
+            recognition.lang = 'ja-JP';
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            var reset = recognition.onend;
+
+            recognition.start();
+
+            recognition.onresult = (e) => {
+                const str = e.results[0][0].transcript;
+                textDisplay.textContent = str;
+
+                if (e.results[0].isFinal) {
+                    console.log(str);
+                    document.getElementById("myobj").value = str;
+                    document.getElementById("myobj").dispatchEvent(new Event('input'));
+                }
+
+                if (speech_recognition_state == 0) {
+                    recognition.start();
+                }
+            }
+
+            document.querySelector('#recognize').onclick = (e) => {
+                recognition.start();
+                speech_recognition_state = 0;
+            }
+
+            recognition.onend = (e) => {
+                console.log('reset');
+                textDisplay.textContent = "認識完了";
+                textDisplay.style.color = "#aaa";
+
+                if (speech_recognition_state == 0) {
+                    recognition.start();
+                }
+            }
+
+            document.getElementById('recognize-end').onclick = (e) => {
+                document.getElementById("myobj").value = ""
+                speech_recognition_state = 1;
+                recognition.end();
+            }
+
+            recognition.onerror = function (event) {
+                console.log('音声認識エラーが検出されました：' + event.error);
+            }
+
+        } catch (error) {
+            console.log(error);
+        }
+
+        var myobj = document.getElementById("myobj");
+
+        myobj.oninput = myfunc;
+        var gTimer;
+
+        function myfunc() {
+            var wObj = document.getElementById("endMsg");
+            wObj.innerHTML = '入力中です';
+            wObj.className = 'defStyle runStyle';
+
+            if (gTimer) {
+                clearTimeout(gTimer);
+            }
+            gTimer = setTimeout(inputEnd, 800);
+        }
+
+        function inputEnd() {
+            var wObj = document.getElementById("endMsg");
+            wObj.innerHTML = '入力完了と判定しました<br>入力：' + document.getElementById("myobj").value;
+            wObj.className = 'defStyle endStyle';
+            document.my_form.submit();
+        }
+    </script>
+
+<div id="japanese"></div>
+<p class="recognize-text">認識結果が表示されます</p>
+<button id="recognize" class="start">音声対話を開始する</button>
+<button id="recognize-end" class="end">音声対話を終了する</button>
+<div id="endMsg">入力完了と判定しました<br>入力：</div>
+
+<form autocomplete="off" name="my_form" id="reconized_form"
+    action="{{ url_for('loop_speech_recognition') }}" method="POST">
+    <label for="reconized_text">認識結果: </label>
+    <input type="text" id="myobj" name="reconized_text" value="">
+    <input type="submit" value="送信">
+</form>
+
+
+
+<form action="/realtime_ajax_map" method="get">
+    <input type="submit" value='地図ページへ行く!'>
+</form>
+</body>
+
+</html>
