@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="ja">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.2/socket.io.js"></script>
+        <link rel="stylesheet" href="./static/css/loop_speech_recognition_style.css">
+        <title>えぇgentとおしゃべりしよう!</title>
+
+        <style>
+            body {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                margin: 0;
+            }
+    
+            #container {
+                text-align: center;
+                margin-top: 20px; /* ヘッダーとの間隔を調整 */
+            }
+    
+            /* 他の要素にも必要に応じて中央寄せのスタイルを追加 */
+    
+        </style>
+    </head>
+    <body>
+        <!--stack overflow, ループから抜け出す方法を教えてください, 
+        https://ja.stackoverflow.com/questions/82445/%E3%83%AB%E3%83%BC%E3%83%97%E3%81%8B%E3%82%89%E6%8A%9C%E3%81%91%E5%87%BA%E3%81%99%E6%96%B9%E6%B3%95%E3%82%92%E6%95%99%E3%81%88%E3%81%A6%E3%81%8F%E3%81%A0%E3%81%95%E3%81%84
+        最終閲覧日2024年2月16日.
+        -->
+        <h1 class="head-line">音声認識による対話</h1>
+
+
+        <p>10個のスポット</p>
+        <ul id="coordinatesList"></ul>
+
+        <script>
+            const socket = io.connect('http://' + document.domain + ':' + location.port);
+
+            socket.on('connect', () => {
+                console.log('Connected to server');
+                //alert("繋ぎました")
+            });
+
+            //10個の座標を表示する
+            socket.on('coordinates', (data) => {
+                console.log('Received coordinates:', data);
+                //alert("座標がとどいた")
+
+                const coordinatesList = document.getElementById('coordinatesList');
+
+                //子要素が存在する場合に子要素を変更する
+                if (coordinatesList.childElementCount >= 10){
+
+                    coordinatesList.children[data.num-1].innerHTML = `[${data.num}] スポット名:${data.name} 住所:${data.address}<br />`;
+                }
+                
+                //子要素が無ければ生成する
+                else {
+                    const listItem = document.createElement('li');
+                    listItem.innerHTML = `[${data.num}] スポット名:${data.name} 住所:${data.address}<br />`;
+                    coordinatesList.appendChild(listItem);
+                }
+            });
+
+
+            // 現在地情報をサーバーに送信
+            function sendLocationToServer() {
+                if ('geolocation' in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                    const { latitude, longitude } = position.coords;
+                    //alert("latitude=" + String(latitude))
+
+                    // 現在地情報をサーバーに送信
+                        socket.emit('update_location', { latitude, longitude });
+                    },
+                    (error) => {
+                        console.error('Error getting location:', error);
+                    }
+                );
+                } else {
+                    console.error('Geolocation is not supported by your browser');
+                }
+            }
+
+            sendLocationToServer();
+
+            // 定期的に位置情報を更新（適宜調整）
+            setInterval(() => {
+                sendLocationToServer();
+                
+            }, 5000); // 30秒ごとに更新
+
+        </script>
+
+
+        <button id="playButton" class="start">音を鳴らす</button>
+        <!--p id="audio_result_show">結果は{{audio_chaged}}です</p-->
+        <p>Agant:{{speech_text}}</p>
+
+        <!--音声合成確認用の入力form-->
+        <form autocomplete="off" name="result_form" id="result_form_id" action="{{ url_for('loop_speech_recognition') }}" method="POST">
+            <label for="result_text">音声を再生したかどうか</label><input type="text" id="audio_result_show" name="audio_result_value" value={{audio_chaged}} readonly>
+            <!--input type="text" id="myobj" value=""-->
+            <!--input type="submit" value="送信"-->
+        </form>
+
+        
+        <script>
+            /*
+            const audio = new Audio('./music/output.wav');
+            document.getElementById('playButton').addEventListener('click', () => {
+
+                //音声を再生する
+                audio.play();
+                
+
+                audio.addEventListener('ended', () => {
+                    console.log('音声ファイルの再生が終了しました');
+
+                    let audio_chaged_data = {{ audio_chaged | tojson }};
+                    //alert(result_data)
+                    
+                    while(true){
+                        //alert(audio_chaged_data)
+                        //audio_changed_dataが1になるまで待つ
+                        if (audio_chaged_data == 1){
+                            break;
+                        } 
+                    }
+
+                    // 新しいwavファイルを取得して再生
+                    updateAudio();
+                    
+                    //audio.play();
+                });
+            });
+
+            
+            function updateAudio() {
+            fetch('/get_audio')  // サーバーから最新のwavファイルを取得
+                .then(response => response.blob())
+                .then(blob => {
+                    // BlobをURLに変換してオーディオ要素に設定
+                    audio.src = URL.createObjectURL(blob);
+
+                    // オーディオ再生
+                    audio.play();
+                });
+            }
+
+            setInterval(updateAudio, 5000); //1秒ごとにファイルを更新する  
+            */
+
+            let audio = new Audio();
+            let currentETag = null;
+            let isUpdateScheduled = false;
+            let isPlaying = false;
+            let isAudioPlayed_change = {{ audio_chaged | tojson }};
+
+            document.getElementById('playButton').addEventListener('click', () => {
+                //alert(isPlaying)
+                if (!isPlaying) {
+                    isPlaying = true;
+                    audio.play();
+
+                    //alert("L81")
+
+                    // updateAudio がまだ呼び出されていない場合に呼び出す
+                    if (!isUpdateScheduled) {
+                        isUpdateScheduled = true;
+                        updateAudio();
+                    }
+
+                    // 音声の再生が終了したことを検出する
+                    audio.addEventListener('ended', () => {
+                        console.log('音声ファイルの再生が終了しました');
+                        isPlaying = false;
+
+                        
+                        //audio.play();
+
+                        isAudioPlayed_change = "再生済"; //javascriptの値を0にする
+
+                        var audio_result_obj = document.getElementById(id="audio_result_show")
+                        audio_result_obj.value = isAudioPlayed_change; //htmlの値を0にする
+
+                        document.my_form.submit(); //formとしてhtml-->flask POSTする
+                        
+                    
+                    });
+                }
+            });
+
+            function updateAudio() {
+                // 新しいwavファイルを取得して再生
+                fetch('/get_audio', {
+                    headers: {
+                        'If-None-Match': currentETag
+                    }
+                })
+                .then(response => {
+                    if (response.status === 304) {
+
+                        //alert("304")
+
+                        // キャッシュが有効な場合は再生せずに終了
+                        return Promise.reject('Not Modified');
+                    } else if (response.status === 200) {
+
+                        //alert("200")
+             
+
+                        // ETagを更新
+                        currentETag = response.headers.get('ETag');
+
+                        // BlobをURLに変換してオーディオ要素に設定
+                        return response.blob();
+                    } else {
+                        return Promise.reject('Unexpected status: ' + response.status);
+                    }
+                })
+                .then(blob => {
+                    // BlobをURLに変換してオーディオ要素に設定
+                    audio.src = URL.createObjectURL(blob);
+
+                    // オーディオ再生
+                    audio.play();
+
+                    // タイマーの制御を解除
+                    isUpdateScheduled = false;
+                })
+                .catch(error => {
+                    if (error !== 'Not Modified') {
+                        console.error('Failed to update audio:', error);
+                    }
+
+                    // タイマーの制御を解除
+                    isUpdateScheduled = false;
+                });
+            }
+        </script>
+    
+
+        
+        <div id="japanese"></div>
+        <p class="recognize-text">認識結果が表示されます</p>
+        <button id="recognize" class="start">音声対話を開始する</button>
+        <button id="recognize-end" class="end">音声対話を終了する</button>
+        <div id="endMsg">入力完了と判定しました</div>
+
+        <!--音声認識用の入力form-->
+        <form autocomplete="off" name="my_form" id="reconized_form" action="{{ url_for('loop_speech_recognition') }}" method="POST">
+            <label for="reconized_text">認識結果: </label><input type="text" id="myobj" name="reconized_text" value="">
+            <!--input type="text" id="myobj" value=""-->
+            <input type="submit" value="送信">
+        </form>
+
+        <script>
+            const textDisplay = document.querySelector('.recognize-text');
+            let speech_recognition_state = 1 //状態0 音声認識を続ける, 状態1 音声認識を終える
+
+            try {
+            // 音声認識
+            window.SpeechRecognition = window.SpeechRecognition || webkitSpeechRecognition;
+            const recognition = new webkitSpeechRecognition();
+            recognition.lang = 'ja-JP';
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            var reset = recognition.onend;
+
+            // 認識スタート
+            recognition.start() //POSTが実行されても, ボタンを押し直さなくても良いため
+
+            /*
+            recognition.onstart = (e)=>{
+                textDisplay.textContent = "認識中";
+                textDisplay.style.color = "#aaa"
+                console.log('Speech recognition service started')
+            }
+            */
+              
+
+            // 認識終了
+            recognition.onresult = (e)=> {
+                const str = e.results[0][0].transcript;
+                textDisplay.textContent = str;
+
+                if(e.results[0].isFinal){
+                    console.log(str);
+                    document.getElementById("myobj").value = str;
+                    document.getElementById("myobj").dispatchEvent(new Event('input'));
+                }
+
+                //alert(speech_recognition_state)
+
+                //続けるときのみ再度認識を行う
+                 //　リセットループ
+                if (speech_recognition_state == 0) {
+                    recognition.start();
+                }
+            }
+            
+            // スタートボタン
+            document.querySelector('#recognize').onclick = (e)=>{
+                recognition.start();
+                speech_recognition_state = 0; //音声認識を続けるに設定する
+            }
+
+           
+            recognition.onend = (e)=> { 
+                console.log('reset')
+                textDisplay.textContent = "認識完了";
+                textDisplay.style.color = "#aaa"
+
+                //alert(speech_recognition_state)
+
+                //続けるときのみ再度認識を行う
+                if (speech_recognition_state == 0) {
+                    recognition.start();
+                }
+            } 
+
+            //終了ボタン
+            document.getElementById('recognize-end').onclick = (e)=>{
+                document.getElementById("myobj").value = ""
+                speech_recognition_state = 1; //音声認識を終えるに設定する
+                recognition.end();
+            }
+
+            recognition.onerror = function(event)  {
+                console.log('音声認識エラーが検出されました：' + event.error);
+            }
+        
+            } catch (error) {
+            console.log(error);
+            }
+           
+          
+
+            var myobj = document.getElementById("myobj");            
+ 
+
+            myobj.oninput = myfunc;
+            var gTimer;
+            function myfunc() {
+                // =========================================================
+                //   入力の度に実行される
+                //     入力完了までタイマーで実行待ちする
+                //     タイマーまでに次の入力があると、再度タイマー設定
+                // =========================================================
+                // --- サンプル用 メッセージ出力 -------------------
+                var wObj = document.getElementById("endMsg");
+                wObj.innerHTML = '入力中です';
+                wObj.className = 'defStyle runStyle';
+                // =============================================
+                //   一定時間を待って入力完了と判断 
+                // =============================================
+                if(gTimer){clearTimeout(gTimer);}
+                gTimer = setTimeout(inputEnd, 800);
+            }
+            function inputEnd(){
+            // =========================================================
+            //   タイマー時間経過で入力完了と判断
+            // =========================================================
+                // サンプル用の処理です。入れ替えて利用ください
+                // 入力完了後のメッセージ入れ替え
+                
+                var wObj    = document.getElementById("endMsg");
+                //wObj.innerHTML = '入力完了と判定しました<br>入力：'+document.getElementById("myobj").value;
+                wObj.innerHTML = '入力完了と判定しました';
+                wObj.className = 'defStyle endStyle';
+                //alert("入力が変更されました")
+                document.my_form.submit(); //formとしてhtml-->flask POSTする
+            }
+        </script>
+         
+        <!--指定したURLに行けるボタン-->
+		<form action="/realtime_ajax_map" method="get">
+			<input type="submit" value='地図ページへ行く!' class="end">
+		</form>
+    </body>
+<html>
