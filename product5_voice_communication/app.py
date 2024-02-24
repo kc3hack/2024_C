@@ -11,8 +11,6 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_socketio import SocketIO
 import os 
 import time
-import random
-from threading import Thread
 
 from TTS_voicevox_local_api_file_write import TTC_voicevox_local_api_chara #TTS
 from Sentenc_Sim import detect_selected_num, detect_yes_or_no #NLP
@@ -519,6 +517,8 @@ def handle_update_location(data):
 	"""
 	0     1     2    3        4    5     6    7     8     9
 	種類, 名前, 地域, 口コミ数, URL, 住所, 概要, 説明, 経度, 緯度
+
+	口コミ数, URL, 住所 
 	"""
 
 	#print("session['near_spots_latitude']")

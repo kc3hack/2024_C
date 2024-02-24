@@ -2,13 +2,10 @@
 
 import requests
 import json
-import sounddevice as sd
 import numpy as np
 
 from scipy.io.wavfile import write
 # from rich import print
-import wave
-
 
 class TTC_voicevox_local_api_chara:
 

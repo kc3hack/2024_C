@@ -55,8 +55,8 @@
         map.panTo([latitude, longitude]);
       });
 
-      var spot_latitudes = [];
-      var spot_longitudes = []
+      var spot_latitudes = []; //隠れスポットの緯度
+      var spot_longitudes = []; //隠れスポットの経度
 
       //10個の座標を表示する
       socket.on('coordinates', (data) => {
@@ -85,7 +85,6 @@
       }
 
 
-      var radius = 2000
 
       /* 位置情報取得成功処理*/
       function onLocationFound(e) {
@@ -102,9 +101,23 @@
 
 
         /* サークルを表示*/
-        L.circle(e.latlng, radius).addTo(map);
+        //L.circle(e.latlng, radius).addTo(map);
         //alert(e.latlng)
       }
+
+
+
+      var radius = 2000
+
+      //現在地の半径2[km]に円を描写
+      function onLocationFound_draw_circle(e) {
+
+        /* サークルを表示*/
+        L.circle(e.latlng, radius).addTo(map);
+
+      }
+
+
 
       function onLocationError(e) {
         alert("現在地を取得できませんでした。" + e.message);
@@ -156,6 +169,8 @@
       updateLocation();
       map.on('locationfound', onLocationFound);
       map.on('locationerror', onLocationError);
+
+      map.on('locationfound', onLocationFound_draw_circle);
 
       map.locate({
         setView: true,

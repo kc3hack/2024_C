@@ -13,7 +13,7 @@ from llama_index.core import SimpleDirectoryReader, VectorStoreIndex
 import re
 
 from GPS_address_distance import GPS_Address_Distance
-from gpt_35_turbo_langchain_memo import make_kyotoben, make_osakaben
+from gpt_35_turbo_langchain_memo import make_kyotoben, make_osakaben, make_kobeben
 
 """
 OpenAIのAPIキーを読み込む
@@ -86,6 +86,11 @@ def llm_preparation(near_spot_row):
         kyotoben_llm = make_kyotoben()
 
         return list_index, kyotoben_llm, "京都"
+
+    elif prefecture == "兵庫県":
+        kobeben_llm = make_kobeben()
+
+        return list_index, kobeben_llm
 
     else:
         osakaben_llm = make_osakaben()
