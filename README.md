@@ -126,6 +126,7 @@
 <!-- 使用技術を入力してください -->
 ### バックエンド
 
+```
 #ノートPC Windows  
 .
 └── python
@@ -156,6 +157,7 @@
 └── API
     ├── OpenAIのgpt3.5-turbo :大規模言語モデル
     └── https://msearch.gsi.go.jp/address-search/AddressSearch :国土交通省 住所のGPSへの変換
+```
 
 　動作環境  :ノートPC Windows  
 　言語      :python  
