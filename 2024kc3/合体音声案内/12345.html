@@ -7,6 +7,25 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.2/socket.io.js"></script>
     <link rel="stylesheet" href="./css/style.css">
     <title>えぇgentとおしゃべりしよう!</title>
+  
+
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+        }
+
+        #container {
+            text-align: center;
+            margin-top: 20px; /* ヘッダーとの間隔を調整 */
+        }
+
+        /* 他の要素にも必要に応じて中央寄せのスタイルを追加 */
+
+    </style>
 </head>
 
 <body>
@@ -16,7 +35,9 @@
 
     <div id="container">
         <p>10個のスポット</p>
-        <ul id="coordinatesList"></ul>
+        <ul id="coordinatesList">
+
+        </ul>
     </div>
 
     <script>
