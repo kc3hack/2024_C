@@ -299,6 +299,7 @@ def loop_speech_recognition():
 			print("session['state']=" + str(session['state']))
 
 			return render_template('loop_speech_recognition.html', audio_chaged=session['isAudioUpdated'], speech_text=session['speech_text']) #html側でこの変数todoを扱えるようにする
+			#return render_template('loop_speech_recognition_desgined.html', audio_chaged=session['isAudioUpdated'], speech_text=session['speech_text'])
 
 
 
@@ -339,7 +340,7 @@ def loop_speech_recognition():
 				pass
 			
 			return render_template('loop_speech_recognition.html', audio_chaged=session['isAudioUpdated'], speech_text=session['speech_text']) #html側でこの変数todoを扱えるようにする
-
+			#return render_template('loop_speech_recognition_desgined.html', audio_chaged=session['isAudioUpdated'], speech_text=session['speech_text'])
 
 
 
@@ -380,7 +381,7 @@ def loop_speech_recognition():
 				pass
 			
 			return render_template('loop_speech_recognition.html', audio_chaged=session['isAudioUpdated'], speech_text=session['speech_text']) #html側でこの変数todoを扱えるようにする
-
+			#return render_template('loop_speech_recognition_desgined.html', audio_chaged=session['isAudioUpdated'], speech_text=session['speech_text'])
 
 		#対話(具体的な説明)
 		if session['state'] == STATE_LIST['communication']:
@@ -423,12 +424,14 @@ def loop_speech_recognition():
 				pass
 
 			return render_template('loop_speech_recognition.html', audio_chaged=session['isAudioUpdated'], speech_text=session['speech_text']) #html側でこの変数todoを扱えるようにする
+			#return render_template('loop_speech_recognition_desgined.html', audio_chaged=session['isAudioUpdated'], speech_text=session['speech_text'])
 
 
 
 
 	else:
 		return render_template('loop_speech_recognition.html', audio_chaged=session['isAudioUpdated'], speech_text=session['speech_text']) #html側でこの変数todoを扱えるようにする
+		#return render_template('loop_speech_recognition_desgined.html', audio_chaged=session['isAudioUpdated'], speech_text=session['speech_text'])
 
 
 
@@ -523,6 +526,32 @@ def handle_update_location(data):
 
 	#print("session['near_spots_latitude']")
 
+	for i in range(10):
+		Top_10_nearest_spots = GPS_add_dis.get_nearest_spots_by_distance(session['my_latitude'], session['my_longitude'])
+	
+		
+		session['near_spots' + str(i)] = {
+			"kind":          Top_10_nearest_spots[i][0], #種類
+			"name":          Top_10_nearest_spots[i][1], #名前
+			"prefecture":    Top_10_nearest_spots[i][2], #地域
+			"kuchikomi_num": Top_10_nearest_spots[i][3], #口コミ数
+			"URL":           Top_10_nearest_spots[i][4], #URL
+			"address":       Top_10_nearest_spots[i][5], #住所
+			"abstract":      Top_10_nearest_spots[i][6], #概要
+			"explanation":   Top_10_nearest_spots[i][7], #説明
+			"latitude":      Top_10_nearest_spots[i][9], #緯度
+			"longitude":     Top_10_nearest_spots[i][8] #経度
+		}
+
+	
+		socketio.emit('coordinates', {'num': i+1, 
+									'name': session['near_spots' + str(i)]["name"], 
+									'address': session['near_spots' + str(i)]["address"], 
+									'abstract': session['near_spots' + str(i)]["abstract"], 
+									'latitude': session['near_spots' + str(i)]["latitude"], 
+									'longitude': session['near_spots' + str(i)]["longitude"]})
+					
+
 
     # クライアントに処理結果をブロードキャスト
 	socketio.emit('location_processed', {'result': 'Success'})
@@ -532,33 +561,19 @@ def handle_update_location(data):
 @socketio.on('connect')
 def handle_connect():
 	print('Client connected')
-	send_random_coordinates()
+	#send_random_coordinates()
 	#start_coordinate_generation()
 
 
 """
 ランダムに生成した座標を送る
 """
+"""
 def send_random_coordinates():
-	#print("ランダムな緯度経度を作れり")
+
 	for i in range(10):
 		Top_10_nearest_spots = GPS_add_dis.get_nearest_spots_by_distance(session['my_latitude'], session['my_longitude'])
 	
-		"""
-		session['near_spots_kind'][i] = Top_10_nearest_spots[i][0] #種類
-		session['near_spots_name'][i] = Top_10_nearest_spots[i][1] #名前
-		session['near_spots_prefecture'][i] = Top_10_nearest_spots[i][2]   #地域
-		
-		session['near_spots_kuchikomi_num'][i] = int(Top_10_nearest_spots[i][3]) #口コミ数
-		session['near_spots_URL'][i] = Top_10_nearest_spots[i][4]         #URL
-		
-		session['near_spots_address'][i] = Top_10_nearest_spots[i][5]     #住所
-		session['near_spots_abstract'][i] = Top_10_nearest_spots[i][6]    #概要
-		session['near_spots_explanation'][i] = Top_10_nearest_spots[i][7]   #説明
-
-		session['near_spots_latitude'][i] = float(Top_10_nearest_spots[i][9])
-		session['near_spots_longitude'][i] = float(Top_10_nearest_spots[i][8])
-		"""
 
 		
 		session['near_spots' + str(i)] = {
@@ -575,14 +590,6 @@ def send_random_coordinates():
 		}
 
 	
-		"""
-		socketio.emit('coordinates', {'num': i+1, 
-									'name': session['near_spots_name'][i], 
-									'address': session['near_spots_address'][i], 
-									'abstract': session['near_spots_abstract'][i], 
-									'latitude': session['near_spots_latitude'][i], 
-									'longitude': session['near_spots_longitude'][i]})
-		"""
 		socketio.emit('coordinates', {'num': i+1, 
 									'name': session['near_spots' + str(i)]["name"], 
 									'address': session['near_spots' + str(i)]["address"], 
@@ -595,7 +602,7 @@ def send_random_coordinates():
 		#print(session)
 
 	session.modified = True
-
+"""
 	
 
 

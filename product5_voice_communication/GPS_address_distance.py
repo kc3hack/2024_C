@@ -155,6 +155,10 @@ class GPS_Address_Distance:
 
                 spot_pos = (spot_latitude, spot_longitude)
                 my_pos = (my_latitude, my_longitude)
+
+                #print("spot_pos=" + str(spot_pos))
+                #print("my_pos=" + str(my_pos))
+
                 distance_m = geodesic(spot_pos, my_pos).m  
                 #distance_between_mypos_and_spots.append(distance_m)
                 distance_between_mypos_and_spots = np.append(distance_between_mypos_and_spots, distance_m)
@@ -176,7 +180,7 @@ class GPS_Address_Distance:
 
     
         #距離の昇順に添え字を並び変える
-        spots_index_sorted_by_distances = np.argsort(distance_between_mypos_and_spots)[::-1]
+        spots_index_sorted_by_distances = np.argsort(distance_between_mypos_and_spots)
         #print("spots_index_sorted_by_distances")
         #print(spots_index_sorted_by_distances)
 
@@ -214,7 +218,7 @@ class GPS_Address_Distance:
 
 if __name__ == "__main__":
     GPS_add_dis = GPS_Address_Distance()
-    GPS_add_dis.get_nearest_spots_by_distance(34, 135)
+    GPS_add_dis.get_nearest_spots_by_distance(34, 138)
 
     #main_address()
     #main_use_test()

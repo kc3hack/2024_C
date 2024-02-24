@@ -9,8 +9,9 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.2/socket.io.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    <link rel="stylesheet" href=".static/css/ajax_map_sanitize.css">
-    <link rel="stylesheet" href=".static/css/ajax_map_style.css">
+    <!--link rel="stylesheet" href=".static/css/ajax_map_sanitize.css"-->
+    <!--link rel="stylesheet" href=".static/css/ajax_map_style.css"-->
+    <link rel="stylesheet" href="./static/css/realtime_ajax_map_style.css">
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <title>Real-time Map</title>
     <style>
@@ -20,6 +21,25 @@
     </style>
   </head>
   <body>
+
+    <style>
+      body {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          margin: 0;
+      }
+
+      #container {
+          text-align: center;
+          margin-top: 20px; /* ヘッダーとの間隔を調整 */
+      }
+
+      /* 他の要素にも必要に応じて中央寄せのスタイルを追加 */
+    </style>
+
+    <p class="head-line">関西えぇgent</p>
     <div id="map" style="width:600px;height:600px"></div>
 
     <form id="my_position_form"  method="POST">
@@ -30,6 +50,7 @@
     <ul id="coordinatesList"></ul>
 
     <script>
+      
       const map = L.map('map').setView([35.6895, 139.6917], 13);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
@@ -64,18 +85,23 @@
           //alert("座標がとどいた")
 
           const coordinatesList = document.getElementById('coordinatesList');
-          const listItem = document.createElement('li');
-          //listItem.textContent = `[${data.num}] Name: ${data.name}, Latitude: ${data.latitude}, Longitude: ${data.longitude}`;
-          listItem.innerHTML = `[${data.num}] スポット名:${data.name} 住所:${data.address}<br />`;
-          //alert(data.latitude)
-          spot_latitudes.push(data.latitude)
-          spot_longitudes.push(data.longitude)
 
-          //alert(spot_latitudes)
-
-          coordinatesList.appendChild(listItem);
-      });
+          //子要素が存在する場合に子要素を変更する
+          if (coordinatesList.childElementCount >= 10){
       
+	          coordinatesList.children[data.num-1].innerHTML = `[${data.num}] スポット名:${data.name} 住所:${data.address}<br />`;
+          }
+          
+          //子要素が無ければ生成する
+          else {
+            const listItem = document.createElement('li');
+            listItem.innerHTML = `[${data.num}] スポット名:${data.name} 住所:${data.address}<br />`;
+            coordinatesList.appendChild(listItem);
+          }
+
+          spot_latitudes.push(data.latitude);
+          spot_longitudes.push(data.longitude);
+      });
       
       
 
@@ -84,38 +110,52 @@
         //map.setView([latitude, longitude], 13);
       }
 
+      
+      
 
+      // マーカーとサークルをまとめるレイヤーグループ
+      var markerGroup = L.layerGroup().addTo(map);
 
       /* 位置情報取得成功処理*/
       function onLocationFound(e) {
-        //var radius = e.accuracy / 3;
-
-        /* マーカーを表示*/
-        L.marker(e.latlng).addTo(map).bindPopup("現在地").openPopup();
         
+
+         // すでにマーカーグループに要素があればクリア
+        markerGroup.clearLayers();
+
+        // 現在地にマーカーとサークルを表示
+        var marker = L.marker(e.latlng).bindTooltip("現在地").addTo(markerGroup);
+        L.circle(e.latlng, { radius: 2000}).addTo(markerGroup);
+
+
+        //隠れスポットのマーカー
+        var spot_maker_list = [] 
+
         for (let i = 0; i < 10; i++){
-          L.marker([spot_latitudes[i], spot_longitudes[i]]).addTo(map) //.bindPopup("てすと").openPopup();
+          var spot_maker = L.marker([spot_latitudes[i], spot_longitudes[i]]).addTo(markerGroup) //.bindPopup("てすと").openPopup();
+          spot_maker_list.push(spot_maker)
         }
         
-        //L.marker([35.7, 139.8]).addTo(map) //.bindPopup("てすと").openPopup();
 
-
-        /* サークルを表示*/
-        //L.circle(e.latlng, radius).addTo(map);
-        //alert(e.latlng)
+        for (let i = 0; i < 10; i++){
+          spot_maker_list[i].on('click', function (e) {
+            // マーカーをクリックしたときに画像を表示
+            //var imgSrc = 'https://4.bp.blogspot.com/-7T-JzvxK5y0/UNO15R_x8oI/AAAAAAAAIvY/q6WNM45XVhE/s1600/number_1.png';
+            //alert(i)
+            var imgSrc = './static/image/spot_img_' + String(i+1)  + '.png';
+            this.bindPopup("<img src='" + imgSrc + "' width='50' height='50'>").openPopup();
+          });
+        }
       }
 
 
-
-      var radius = 2000
-
-      //現在地の半径2[km]に円を描写
+      
+      /* サークルを表示
       function onLocationFound_draw_circle(e) {
 
-        /* サークルを表示*/
         L.circle(e.latlng, radius).addTo(map);
-
-      }
+      }*/
+      
 
 
 
@@ -170,7 +210,7 @@
       map.on('locationfound', onLocationFound);
       map.on('locationerror', onLocationError);
 
-      map.on('locationfound', onLocationFound_draw_circle);
+      //map.on('locationfound', onLocationFound_draw_circle);
 
       map.locate({
         setView: true,
@@ -184,8 +224,8 @@
         updateLocation();
 
         //alert(spot_latitudes)
-        map.on('locationfound', onLocationFound);
-        map.on('locationerror', onLocationError);
+        //map.on('locationfound', onLocationFound);
+        //map.on('locationerror', onLocationError);
 
         map.locate({
           //setView: true,
@@ -193,11 +233,11 @@
           timeout: 20000
         });
 
-      }, 5000); // 5秒ごとに更新
+      }, 5000); // 30秒ごとに更新
     </script>
 
     <form action="/loop_speech_recognition" method="get">
-      <input type="submit" value='音声ページへ行く!'>
+      <input type="submit" value='音声ページへ行く!' class="button">
     </form>
   </body>
 </html>

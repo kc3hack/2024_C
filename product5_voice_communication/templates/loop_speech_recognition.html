@@ -4,14 +4,33 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.2/socket.io.js"></script>
+        <link rel="stylesheet" href="./static/css/loop_speech_recognition_style.css">
         <title>えぇgentとおしゃべりしよう!</title>
+
+        <style>
+            body {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                margin: 0;
+            }
+    
+            #container {
+                text-align: center;
+                margin-top: 20px; /* ヘッダーとの間隔を調整 */
+            }
+    
+            /* 他の要素にも必要に応じて中央寄せのスタイルを追加 */
+    
+        </style>
     </head>
     <body>
         <!--stack overflow, ループから抜け出す方法を教えてください, 
         https://ja.stackoverflow.com/questions/82445/%E3%83%AB%E3%83%BC%E3%83%97%E3%81%8B%E3%82%89%E6%8A%9C%E3%81%91%E5%87%BA%E3%81%99%E6%96%B9%E6%B3%95%E3%82%92%E6%95%99%E3%81%88%E3%81%A6%E3%81%8F%E3%81%A0%E3%81%95%E3%81%84
         最終閲覧日2024年2月16日.
         -->
-        <h1>音声認識による対話</h1>
+        <h1 class="head-line">音声認識による対話</h1>
 
 
         <p>10個のスポット</p>
@@ -31,10 +50,19 @@
                 //alert("座標がとどいた")
 
                 const coordinatesList = document.getElementById('coordinatesList');
+
+                //子要素が存在する場合に子要素を変更する
+                if (coordinatesList.childElementCount >= 10){
+
+                    coordinatesList.children[data.num-1].innerHTML = `[${data.num}] スポット名:${data.name} 住所:${data.address}<br />`;
+                }
+                
+                //子要素が無ければ生成する
+                else {
                 const listItem = document.createElement('li');
-                //listItem.textContent = `[${data.num}] Name: ${data.name}, Latitude: ${data.latitude}, Longitude: ${data.longitude}`;
                 listItem.innerHTML = `[${data.num}] スポット名:${data.name} 住所:${data.address}<br />`;
                 coordinatesList.appendChild(listItem);
+                }
             });
 
 
@@ -62,12 +90,12 @@
             // 定期的に位置情報を更新（適宜調整）
             setInterval(() => {
                 sendLocationToServer();
-            }, 5000); // 5秒ごとに更新
+            }, 5000); // 30秒ごとに更新
 
         </script>
 
 
-        <button id="playButton">音を鳴らす</button>
+        <button id="playButton" class="start">音を鳴らす</button>
         <!--p id="audio_result_show">結果は{{audio_chaged}}です</p-->
         <p>Agant:{{speech_text}}</p>
 
@@ -218,11 +246,11 @@
         
         <div id="japanese"></div>
         <p class="recognize-text">認識結果が表示されます</p>
-        <button id="recognize">音声対話を開始する</button>
-        <button id="recognize-end">音声対話を終了する</button>
-        <div id="endMsg">入力完了と判定しました<br>入力：</div>
+        <button id="recognize" class="start">音声対話を開始する</button>
+        <button id="recognize-end" class="end">音声対話を終了する</button>
+        <div id="endMsg">入力完了と判定しました</div>
 
-        //音声認識用の入力form
+        <!--音声認識用の入力form-->
         <form autocomplete="off" name="my_form" id="reconized_form" action="{{ url_for('loop_speech_recognition') }}" method="POST">
             <label for="reconized_text">認識結果: </label><input type="text" id="myobj" name="reconized_text" value="">
             <!--input type="text" id="myobj" value=""-->
@@ -340,7 +368,8 @@
                 // 入力完了後のメッセージ入れ替え
                 
                 var wObj    = document.getElementById("endMsg");
-                wObj.innerHTML = '入力完了と判定しました<br>入力：'+document.getElementById("myobj").value;
+                //wObj.innerHTML = '入力完了と判定しました<br>入力：'+document.getElementById("myobj").value;
+                wObj.innerHTML = '入力完了と判定しました';
                 wObj.className = 'defStyle endStyle';
                 //alert("入力が変更されました")
                 document.my_form.submit(); //formとしてhtml-->flask POSTする
@@ -349,7 +378,7 @@
          
         <!--指定したURLに行けるボタン-->
 		<form action="/realtime_ajax_map" method="get">
-			<input type="submit" value='地図ページへ行く!'>
+			<input type="submit" value='地図ページへ行く!' class="end">
 		</form>
     </body>
 <html>
