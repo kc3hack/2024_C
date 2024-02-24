@@ -127,7 +127,7 @@
 ### バックエンド
 
 ```
-#ノートPC Windows  
+ノートPC Windows  
 .
 └── python
     ├── サーバやhttpとsocket通信
@@ -159,52 +159,22 @@
     └── https://msearch.gsi.go.jp/address-search/AddressSearch :国土交通省 住所のGPSへの変換
 ```
 
-　動作環境  :ノートPC Windows  
-　言語      :python  
-  
-    　　　　サーバやhttpとsocket通信  
-　          - flask        :webアプリケーションの作成  
-            - sqlalchemy   :データベースの操作  
-            - requests　   :httpリクエストの取得  
-            - BeautifulSoup:じゃらん様サイトのhtmlデータの抽出  
-            - json         :json形式データの操作  
-            - urllib       :日本語URLの符号化  
-  
-            言語処理  
-　　　　　　 - llama_index  :RAGによる大規模言語モデルの外部知識参照  
-            - langchain   :大規模言語モデルの会話の記憶  
-            - Levenshtein :レーベンシュタイン距離による文字列類似度  
-            - re          :正規表現  
-  
-　　　　　　 ファイル入出力  
-            - numpy       :音声ファイル読込み   
-            - scipy       :音声ファイル書き出し    
-            - csv         :じゃらん様から取得させて頂いたデータの保管  
-            - os          :ファイル操作  
-  
-　　　　　　その他  
-            - geopy　　　  :緯度経度での距離計算  
-            - time        :プログラム内での一時停止  
-  
-　ソフトウェア :VOICEVOX:春日部つむぎ :音声合成  
-  
-  API         :OpenAIのgpt3.5-turbo :大規模言語モデル  
-               https://msearch.gsi.go.jp/address-search/AddressSearch :国土交通省 住所のGPSへの変換  
-
 
 ### フロントエンド
-　動作環境:ノートPCやスマートフォンのブラウザ  
-　言語:html  
-  
-　　　 css  
-　　　　- https://unpkg.com/leaflet/dist/leaflet.css : leafletの現在地と地図  
-  
-　　　 javascript  
-　　　　 - https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.2/socket.io.js : ajax通信  
-        - https://unpkg.com/leaflet/dist/leaflet.js : leafletの現在地と地図  
-  
-　API: webkitSpeechRecognition : 音声認識  
-       https://tile.openstreetmap.org : 表示する地図の画像  
+```
+ノートPCやスマートフォンのブラウザ  
+.   
+├── html
+├── css
+│   └── https://unpkg.com/leaflet/dist/leaflet.css : leafletの現在地と地図
+└── javascript
+    ├── https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.2/socket.io.js : ajax通信
+    └── https://unpkg.com/leaflet/dist/leaflet.js : leafletの現在地と地図 
+.
+└── API
+    ├── webkitSpeechRecognition : 音声認識
+    └── https://tile.openstreetmap.org : 表示する地図の画像 
+```
   
 <!--
 markdownの記法はこちらを参照してください！
