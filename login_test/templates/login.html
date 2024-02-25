@@ -11,13 +11,11 @@
             <div id="form-div">
                 {% with messages = get_flashed_messages() %}
                 {% if messages %}
-                <ul class=flashes>
                 {% for message in messages %}
                   <div>
                     <h3 class="error-msg">{{ message }}</h2>
                   </div>
                 {% endfor %}
-                </ul>
                 {% endif %}
                 {% endwith %}
                 <form class="form" id="form1" method="post" novalidate>
