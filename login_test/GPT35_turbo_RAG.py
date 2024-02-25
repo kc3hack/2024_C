@@ -13,7 +13,6 @@ from llama_index.core import SimpleDirectoryReader, VectorStoreIndex
 import re
 
 from gpt_35_turbo_langchain_memo import make_kyotoben, make_osakaben, make_kobeben
-import GPSAddressDistance
 
 """
 OpenAIのAPIキーを読み込む
@@ -67,7 +66,7 @@ def llm_preparation(near_spot_row):
 	種類, 名前, 地域, 口コミ数, URL, 住所, 概要, 説明, 経度, 緯度
 	"""
     #選ばれた地域の1つの行
-    sentences = near_spot_row[7]
+    sentences = near_spot_row.detail
 
 
     #一時的に保存する知識データファイルのパス
@@ -80,14 +79,14 @@ def llm_preparation(near_spot_row):
     list_index = get_knowledge_from_data(temp_dir_path)
 
 
-    prefecture = near_spot_row[2]
+    prefecture = near_spot_row.pref
 
-    if prefecture == "京都府": 
+    if prefecture == 0: 
         kyotoben_llm = make_kyotoben()
 
         return list_index, kyotoben_llm, "京都"
 
-    elif prefecture == "兵庫県":
+    elif prefecture == 1:
         kobeben_llm = make_kobeben()
 
         return list_index, kobeben_llm
@@ -129,8 +128,8 @@ def llm_communication(list_index, hogen_llm, hogen_tag, reconized_text):
 
 
 def main_use_test():
-
-    Top_10_nearest_spots = GPSAddressDistance.getNearestSpotByDistance(34, 135)
+    from app import GPS_add_dis
+    Top_10_nearest_spots = GPS_add_dis.getNearestSpotByDistance(34, 135)
 
     list_index, hogen_llm, hogen_tag = llm_preparation(Top_10_nearest_spots[0])
 

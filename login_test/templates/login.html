@@ -5,8 +5,21 @@
         <div class="slide-image" style="background-image: url('./static/signup/img/京都観光.jpg');"></div>
         <div class="slide-image" style="background-image: url('./static/signup/img/EBP10-41391A.jpg');"></div>
         <div class="slide-image" style="background-image: url('./static/signup/img/spot-osaka-key2023.jpg');"></div>  
+
         <div id="form-main">
+
             <div id="form-div">
+                {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                <ul class=flashes>
+                {% for message in messages %}
+                  <div>
+                    <h3 class="error-msg">{{ message }}</h2>
+                  </div>
+                {% endfor %}
+                </ul>
+                {% endif %}
+                {% endwith %}
                 <form class="form" id="form1" method="post" novalidate>
                     {{form.hidden_tag()}}
                     <h1>関西ええgent-Login</h1>
