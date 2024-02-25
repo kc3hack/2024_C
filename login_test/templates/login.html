@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <div class="slide">
+        <div class="slide-image" style="background-image: url('./static/signup/img/京都観光.jpg');"></div>
+        <div class="slide-image" style="background-image: url('./static/signup/img/EBP10-41391A.jpg');"></div>
+        <div class="slide-image" style="background-image: url('./static/signup/img/spot-osaka-key2023.jpg');"></div>  
+        <div id="form-main">
+            <div id="form-div">
+                <form class="form" id="form1" method="post" novalidate>
+                    {{form.hidden_tag()}}
+                    <h1>関西ええgent-Login</h1>
+                    <p class="name">
+                        {{form.username(class_="feedback-input")}}<br>
+                        {% for error in form.username.errors %}
+                            <span style="color: red;">[{{ error }}]</span>
+                        {% endfor %}
+                    </p>
+                    <p>
+                        {{form.password(class_="feedback-input")}}
+                        {% for error in form.password.errors %}
+                            <span style="color: red;">[{{ error }}]</span>
+                        {% endfor %}
+                    </p>
+                    <div class="submit">
+                        {{ form.submit() }}
+                        <div class="ease"></div>
+                    </div>
+                </form>
+                <p class="new">
+                    <a href="/signup" id="button-blue">Sign up</a>
+                    <div class="ease"></div>
+                </p>
+            </div>
+        </div>
+    </div>
+{% endblock %}
