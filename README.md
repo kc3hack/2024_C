@@ -1,7 +1,7 @@
 # 関西えぇgent 
 <!-- プロダクト名に変更してください -->
 
-[kansaieegent](https://github.com/kc3hack/2024_C/blob/main/kansai_eegent_logo.png)
+![kansai_eegent_logo](https://github.com/kc3hack/2024_C/assets/75715137/f6d02f09-e134-4577-aa8d-a206cdd447fa)
 
 <!--[関西えぇgent](https://github.com/kc3hack/2024_C/blob/backend/kansai_eegent_logo.png?raw=true)-->
 
