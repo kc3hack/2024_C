@@ -175,16 +175,62 @@ class RejectedSpot(db.Model):
     def __repr__(self):
         return f'<RejectedSpot  {self.name}>'
 
+
+
+def session_voice_init():
+
+	print("initializedされました")
+	session[INITIALIZED_KEY] = True
+	session['state'] = STATE_LIST['selection']
+	session['reconized_text'] = ""
+	session['selected_spot'] = 1
+	session['isAudioUpdated'] = "再生済" #音声ファイルが更新されたかどうか 0変わらない, 1更新された
+	session['speech_text'] = ""
+
+	#session['my_latitude'] = 0
+	#session['my_longitude'] = 0
+
+	session['communication_count'] = 0 #対話回数を保持する
+
+	session['speech_text'] = "1から10までの好きなスポットを選んでくれへん?"
+	session['isAudioUpdated'] = "未再生"
+
+	#付近の近い10スポット
+
+	"""
+	0     1     2    3        4    5     6    7     8     9
+	種類, 名前, 地域, 口コミ数, URL, 住所, 概要, 説明, 経度, 緯度
+	"""
+	for i in range(10):
+		session['near_spots' + str(i)] = {
+			"kind":"", #種類
+			"name":"", #名前
+			"prefecture":"", #地域
+			"kuchikomi_num":0, #口コミ数
+			"URL":"", #URL
+			"address":"", #住所
+			"abstract":"", #概要
+			"explanation":"", #説明
+			"latitude":"", #緯度
+			"longitude":"" #経度
+		}
+
+
 @mainapp.route('/', methods=['GET', 'POST'])
 @mainapp.route('/login', methods=['GET', 'POST'])
 def login():
     """
 	セッションのクリア 追加
     """
-    session.clear()
+    #session.clear()
+    session_voice_init()
+    """
+	/logutでログアウト
+	"""
 
     if current_user.is_authenticated:
-        return redirect(url_for('map'))
+        #return redirect(url_for('map'))
+        return redirect(url_for("loop_speech_recognition"))
     form = LoginForm()
     if form.validate_on_submit():
         user = User.query.filter_by(username=form.username.data).first()
@@ -192,13 +238,15 @@ def login():
             flash('Invalid username or password')
             return redirect(url_for('login'))
         login_user(user)
-        return redirect(url_for('map'))
+        #return redirect(url_for('map'))
+        return redirect(url_for("loop_speech_recognition"))
     return render_template('login.html', title='Sign In', form=form)
 
 @mainapp.route('/signup', methods=['GET', 'POST'])
 def signup():#サインアップ実装
     if current_user.is_authenticated:
-        return redirect(url_for('map'))
+        #return redirect(url_for('map'))
+        return redirect(url_for("loop_speech_recognition"))
     form = SignUpForm()
     if form.validate_on_submit():
         user = User.query.filter_by(username=form.username.data).first()
@@ -245,7 +293,8 @@ def add_spot():
                        pref = int(form.spot_place.data))
         Spot.query.session.add(newSpot)
         Spot.query.session.commit()
-        return redirect(url_for("map"))
+        #return redirect(url_for("map"))
+        return redirect(url_for("loop_speech_recognition"))
     return render_template('addSpot.html', form = form, cssMode = "add_spot")
 
 
@@ -280,6 +329,17 @@ list_index = ""
 hogen_llm = ""
 hogen_tag = ""
 
+"""
+現在地の大域変数
+"""
+global_my_latitude = 0
+global_my_longitude = 0
+
+
+
+
+
+
 #/<string:state>
 #音声認識の連続的な繰り返し methodを明示しないとmethod not allowed errorになる
 @mainapp.route('/loop_speech_recognition',  methods=['POST', 'GET'])
@@ -287,6 +347,9 @@ def loop_speech_recognition():
 
 	global SESSION_INIT
 	global list_index, hogen_llm, hogen_tag 
+
+	global global_my_latitude
+	global global_my_longitude
 
 
 	spot_num = 10
@@ -317,8 +380,8 @@ def loop_speech_recognition():
 		session['isAudioUpdated'] = "再生済" #音声ファイルが更新されたかどうか 0変わらない, 1更新された
 		session['speech_text'] = ""
 
-		session['my_latitude'] = 0
-		session['my_longitude'] = 0
+		#session['my_latitude'] = 0
+		#session['my_longitude'] = 0
 
 		session['communication_count'] = 0 #対話回数を保持する
 
@@ -416,8 +479,9 @@ def loop_speech_recognition():
 				session['selected_spot'] = detect_selected_num(session['reconized_text'], spot_num)
 				
 				print("selected_num=" + str(session['selected_spot']))
-				print("L412音声対話 session['my_latitude']=" + str(session['my_latitude'])+ ", session['my_longitude']=" + str(session['my_longitude']))
-				Top_10_nearest_spots = GPS_add_dis.get_nearest_spots_by_distance(session['my_latitude'], session['my_longitude'])
+				#print("L412音声対話 session['my_latitude']=" + str(session['my_latitude'])+ ", session['my_longitude']=" + str(session['my_longitude']))
+				print("L412音声対話 global_my_latitude=" + str(global_my_latitude)+ ", global_my_longitude=" + str(global_my_longitude))
+				Top_10_nearest_spots = GPS_add_dis.get_nearest_spots_by_distance(global_my_latitude, global_my_longitude)
 				
 				#京都府の場合は京都弁になる
 				if Top_10_nearest_spots[int(session['selected_spot'])-1][2] == "京都府":
@@ -458,7 +522,8 @@ def loop_speech_recognition():
 				#print("session['near_spots_abstract']=" + str(session['near_spots_abstract']))
 				#time.sleep(2)
 				#session['speech_text'] = str(session['selected_spot']) + "番目のスポットは" + session['near_spots' + str(['selected_spot'] + 1)]["abstract"] + "感じのスポットやねん"
-				Top_10_nearest_spots = GPS_add_dis.get_nearest_spots_by_distance(session['my_latitude'], session['my_longitude'])
+				#Top_10_nearest_spots = GPS_add_dis.get_nearest_spots_by_distance(session['my_latitude'], session['my_longitude'])
+				Top_10_nearest_spots = GPS_add_dis.get_nearest_spots_by_distance(global_my_latitude, global_my_longitude)
 				
 				#京都府の場合は京都弁になる
 				if Top_10_nearest_spots[int(session['selected_spot'])-1][2] == "京都府":
@@ -498,7 +563,8 @@ def loop_speech_recognition():
 				#session['reconized_text'] = request.form.get("reconized_text")
 					
 				#GPS情報を取得する
-				Top_10_nearest_spots = GPS_add_dis.get_nearest_spots_by_distance(session['my_latitude'], session['my_longitude'])
+				#Top_10_nearest_spots = GPS_add_dis.get_nearest_spots_by_distance(session['my_latitude'], session['my_longitude'])
+				Top_10_nearest_spots = GPS_add_dis.get_nearest_spots_by_distance(global_my_latitude, global_my_longitude)
 				
 
 				if session['communication_count'] == 0:
@@ -587,15 +653,22 @@ def realtime_map_show():
 """
 @socketio.on('update_location')
 def handle_update_location(data):
+	global global_my_latitude
+	global global_my_longitude
 
 	if data.get('latitude', '') != 0:
-		session['my_latitude'] = data.get('latitude', '')
+		#session['my_latitude'] = data.get('latitude', '')
+		global_my_latitude = data.get('latitude', '')
 
 	if data.get('longitude', '') != 0:
-		session['my_longitude'] = data.get('longitude', '')
+		#session['my_longitude'] = data.get('longitude', '')
+		global_my_longitude = data.get('longitude', '')
 	
-	print("latitude=" + str(session['my_latitude']))
-	print("longitude=" + str(session['my_longitude']))
+	#print("latitude=" + str(session['my_latitude']))
+	#print("longitude=" + str(session['my_longitude']))
+
+	print("global_my_latitude=" + str(global_my_latitude))
+	print("global_my_longitude=" + str(global_my_longitude))
 
 	"""
 	0     1     2    3        4    5     6    7     8     9
@@ -607,7 +680,8 @@ def handle_update_location(data):
 	#print("session['near_spots_latitude']")
 
 	for i in range(10):
-		Top_10_nearest_spots = GPS_add_dis.get_nearest_spots_by_distance(session['my_latitude'], session['my_longitude'])
+		#Top_10_nearest_spots = GPS_add_dis.get_nearest_spots_by_distance(session['my_latitude'], session['my_longitude'])
+		Top_10_nearest_spots = GPS_add_dis.get_nearest_spots_by_distance(global_my_latitude, global_my_longitude)
 	
 		
 		session['near_spots' + str(i)] = {
@@ -648,10 +722,12 @@ def handle_connect():
 """
 セッションの削除
 """
-@mainapp.route('/clear_session')
-def clear_session():
-    session.clear()
-    return 'Session cleared!'
+@mainapp.route('/clear_voice_session')
+def clear_voice_session():
+    #session.clear()
+	session_voice_init()
+	#return 'Session cleared!'
+	return redirect(url_for("loop_speech_recognition"))
 
 """
 ここまでがbackendブランチ部分 (地図表示)
@@ -661,4 +737,17 @@ def clear_session():
 if __name__ == "__main__":
     #mainapp.run(debug=True, port=8000, host="0.0.0.0")
 
-    socketio.run(mainapp, debug=True, port=8000, host="0.0.0.0")
+	"""
+	DB消去から再生成
+	(1) app.dbを削除する
+	(2) flask db init コマンドを実行する
+	(3) sign up する
+	(4) flask shell コマンドでflaks shellに入る
+	(5) db.create_all() コマンドでDBを作成する
+	(6) exit() でflask shellを出る
+	"""
+	
+	#socketio.run(mainapp, debug=False, port=8000, host="0.0.0.0")
+
+	if __name__ == "__main__":
+		socketio.run(mainapp, debug=False, port=8000, host="0.0.0.0")
